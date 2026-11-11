@@ -15,6 +15,7 @@ import Orders from '../pages/Orders'
 import Addresses from '../pages/Addresses'
 import OrderDetails from '../pages/OrderDetails'
 import CustomerProfile from '../pages/CustomerProfile'
+import BecomeSeller from '../pages/BecomeSeller'
 
 
 function AppRoutes() {
@@ -38,6 +39,7 @@ function AppRoutes() {
             <Route path="/orders/:orderId" element={<OrderDetails />} />
             <Route path="/addresses" element={<Addresses />} />
             <Route path="/customer" element={<CustomerProfile />} />
+            <Route path="/become-seller" element={<BecomeSeller />} />
           </Route>
         </Route>
 

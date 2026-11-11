@@ -115,6 +115,14 @@ function Navbar() {
 
             {/* Customer Actions */}
             <div className="flex items-center gap-5 text-[#101A30]">
+                            {user?.role === 'CUSTOMER' && (
+                <Link
+                  to="/become-seller"
+                  className="hidden md:block hover:text-[#2864F0] text-sm font-medium"
+                >
+                  Become a Seller
+                </Link>
+              )}
 
               <Link
                 to="/wishlist"
