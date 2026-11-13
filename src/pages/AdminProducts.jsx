@@ -1,0 +1,314 @@
+// File: src/pages/AdminProducts.jsx
+import { useEffect, useState } from 'react'
+import { apiRequest } from '../services/api'
+
+// Status filter tabs (value '' means all products)
+const tabs = [
+  { value: '', label: 'All' },
+  { value: 'ACTIVE', label: 'Active' },
+  { value: 'DRAFT', label: 'Draft' },
+  { value: 'REJECTED', label: 'Rejected' },
+  { value: 'ARCHIVED', label: 'Archived' },
+]
+
+const badgeColors = {
+  ACTIVE: 'bg-green-50 text-green-700 border-green-200',
+  DRAFT: 'bg-yellow-50 text-yellow-800 border-yellow-200',
+  REJECTED: 'bg-red-50 text-red-700 border-red-200',
+  ARCHIVED: 'bg-gray-100 text-gray-700 border-gray-200',
+}
+
+// Allowed status changes (same rules as the backend)
+// DRAFT -> ACTIVE / REJECTED / ARCHIVED
+// ACTIVE -> ARCHIVED
+// REJECTED -> DRAFT / ARCHIVED
+// ARCHIVED -> ACTIVE
+const actionsByStatus = {
+  DRAFT: [
+    { to: 'ACTIVE', label: 'Activate', style: 'bg-green-600 text-white hover:bg-green-700' },
+    { to: 'REJECTED', label: 'Reject', style: 'bg-red-600 text-white hover:bg-red-700' },
+    { to: 'ARCHIVED', label: 'Archive', style: 'bg-gray-200 text-[#101A30] hover:bg-gray-300' },
+  ],
+  ACTIVE: [
+    { to: 'ARCHIVED', label: 'Archive', style: 'bg-gray-200 text-[#101A30] hover:bg-gray-300' },
+  ],
+  REJECTED: [
+    { to: 'DRAFT', label: 'Move to Draft', style: 'bg-yellow-500 text-white hover:bg-yellow-600' },
+    { to: 'ARCHIVED', label: 'Archive', style: 'bg-gray-200 text-[#101A30] hover:bg-gray-300' },
+  ],
+  ARCHIVED: [
+    { to: 'ACTIVE', label: 'Activate', style: 'bg-green-600 text-white hover:bg-green-700' },
+  ],
+}
+
+const PAGE_SIZE = 10
+
+function formatDate(value) {
+  if (!value) return '-'
+  return new Date(value).toLocaleDateString('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  })
+}
+
+
+
+function AdminProducts() {
+  const [activeTab, setActiveTab] = useState('')
+  const [searchInput, setSearchInput] = useState('')
+  const [search, setSearch] = useState('')
+  const [page, setPage] = useState(1)
+  const [products, setProducts] = useState([])
+  const [pagination, setPagination] = useState({ page: 1, totalPages: 1, total: 0 })
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
+  const [busyId, setBusyId] = useState(null) // product id currently being updated
+  const [refreshKey, setRefreshKey] = useState(0) // change this to reload the list
+
+  // Load products whenever status tab, search text, page or refreshKey changes
+  useEffect(() => {
+    let cancelled = false
+
+    async function loadProducts() {
+      try {
+        setLoading(true)
+        setError('')
+
+        const params = new URLSearchParams()
+        params.set('page', String(page))
+        params.set('limit', String(PAGE_SIZE))
+        if (activeTab) params.set('status', activeTab)
+        if (search) params.set('search', search)
+
+        const res = await apiRequest(`/admin/products?${params.toString()}`)
+        if (!cancelled) {
+          // This API returns data.products and data.pagination
+          setProducts(res.data?.products || [])
+          setPagination(res.data?.pagination || { page: 1, totalPages: 1, total: 0 })
+        }
+      } catch (err) {
+        if (!cancelled) setError(err.message || 'Something went wrong')
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+
+    loadProducts()
+    return () => {
+      cancelled = true
+    }
+  }, [activeTab, search, page, refreshKey])
+
+  const handleTabChange = (value) => {
+    setActiveTab(value)
+    setPage(1)
+  }
+
+  const handleSearchSubmit = (e) => {
+    e.preventDefault()
+    setSearch(searchInput.trim())
+    setPage(1)
+  }
+
+  const handleClearSearch = () => {
+    setSearchInput('')
+    setSearch('')
+    setPage(1)
+  }
+
+  // Change product status (Activate / Reject / Archive / Move to Draft)
+  const handleStatusChange = async (product, action) => {
+    const payload = { status: action.to }
+
+    // Reject needs a reason (backend requires it)
+    if (action.to === 'REJECTED') {
+      const reason = window.prompt(`Reason for rejecting "${product.name}":`)
+      if (reason === null) return // admin cancelled
+      if (!reason.trim()) {
+        setError('Reason is required to reject a product.')
+        return
+      }
+      payload.reason = reason.trim()
+    } else if (action.to === 'ARCHIVED') {
+      const ok = window.confirm(`Archive "${product.name}"?`)
+      if (!ok) return
+    }
+
+    try {
+      setBusyId(product.id)
+      setError('')
+      setSuccess('')
+
+      await apiRequest(`/admin/products/${product.id}/status`, {
+        method: 'PATCH',
+        body: JSON.stringify(payload),
+      })
+
+      setSuccess(`"${product.name}" is now ${action.to}.`)
+      setRefreshKey((k) => k + 1) // reload list
+    } catch (err) {
+      setError(err.message || 'Could not update product status')
+    } finally {
+      setBusyId(null)
+    }
+  }
+
+  return (
+    <div>
+      <h2 className="text-2xl font-bold text-[#101A30]">Products</h2>
+      <p className="text-sm text-[#52647D] mt-1">
+        Review and manage products from every seller. ({pagination.total} total)
+      </p>
+
+      {/* Status tabs */}
+      <div className="flex flex-wrap gap-2 mt-6">
+        {tabs.map((tab) => (
+          <button
+            key={tab.label}
+            onClick={() => handleTabChange(tab.value)}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+              activeTab === tab.value
+                ? 'bg-[#2864F0] text-white'
+                : 'bg-white text-[#101A30] hover:bg-[#E4E4F2]'
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Search box */}
+      <form onSubmit={handleSearchSubmit} className="flex gap-2 mt-4">
+        <input
+          type="text"
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
+          placeholder="Search by product name or brand"
+          className="w-full max-w-sm px-4 py-2 rounded-lg border border-gray-200 bg-white text-sm text-[#101A30] focus:outline-none focus:border-[#2864F0]"
+        />
+        <button
+          type="submit"
+          className="px-4 py-2 rounded-lg text-sm font-medium bg-[#2864F0] text-white hover:bg-[#2878C8] transition"
+        >
+          Search
+        </button>
+        {search && (
+          <button
+            type="button"
+            onClick={handleClearSearch}
+            className="px-4 py-2 rounded-lg text-sm font-medium bg-white text-[#101A30] hover:bg-[#E4E4F2] transition"
+          >
+            Clear
+          </button>
+        )}
+      </form>
+
+      {success && (
+        <div className="mt-5 rounded-lg bg-green-50 border border-green-200 text-green-700 px-4 py-3 text-sm">
+          {success}
+        </div>
+      )}
+
+      {error && (
+        <div className="mt-5 rounded-lg bg-red-50 border border-red-200 text-red-700 px-4 py-3 text-sm">
+          {error}
+        </div>
+      )}
+
+      <div className="mt-5 bg-white rounded-xl shadow-sm overflow-x-auto">
+        {loading ? (
+          <p className="p-6 text-[#52647D]">Loading products...</p>
+        ) : products.length === 0 ? (
+          <p className="p-6 text-[#52647D]">No products found.</p>
+        ) : (
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-[#52647D] border-b border-gray-100">
+                <th className="px-6 py-4 font-medium">Product</th>
+                <th className="px-6 py-4 font-medium">Seller</th>
+                <th className="px-6 py-4 font-medium">Category</th>
+                <th className="px-6 py-4 font-medium">Status</th>
+                <th className="px-6 py-4 font-medium">Created</th>
+                <th className="px-6 py-4 font-medium">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {products.map((product) => (
+                <tr key={product.id} className="border-b border-gray-50 last:border-0">
+                  <td className="px-6 py-4">
+                    <p className="font-semibold text-[#101A30]">{product.name}</p>
+                    {product.brand && (
+                      <p className="text-xs text-[#52647D] mt-1">{product.brand}</p>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 text-[#101A30]">
+                    {product.seller?.shopName || '-'}
+                  </td>
+                  <td className="px-6 py-4 text-[#52647D]">
+                    {product.category?.name || '-'}
+                  </td>
+                  
+                  <td className="px-6 py-4">
+                    <span
+                      className={`inline-block px-3 py-1 rounded-full border text-xs font-semibold ${
+                        badgeColors[product.status] || ''
+                      }`}
+                    >
+                      {product.status}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-[#52647D]">
+                    {formatDate(product.createdAt)}
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex flex-wrap gap-2">
+                      {(actionsByStatus[product.status] || []).map((action) => (
+                        <button
+                          key={action.to}
+                          disabled={busyId === product.id}
+                          onClick={() => handleStatusChange(product, action)}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition disabled:opacity-50 ${action.style}`}
+                        >
+                          {busyId === product.id ? 'Please wait...' : action.label}
+                        </button>
+                      ))}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      {/* Pagination */}
+      {!loading && pagination.totalPages > 1 && (
+        <div className="flex items-center justify-between mt-4">
+          <p className="text-sm text-[#52647D]">
+            Page {pagination.page} of {pagination.totalPages}
+          </p>
+          <div className="flex gap-2">
+            <button
+              disabled={page <= 1}
+              onClick={() => setPage((p) => p - 1)}
+              className="px-4 py-2 rounded-lg text-sm font-medium bg-white text-[#101A30] hover:bg-[#E4E4F2] transition disabled:opacity-50"
+            >
+              Previous
+            </button>
+            <button
+              disabled={page >= pagination.totalPages}
+              onClick={() => setPage((p) => p + 1)}
+              className="px-4 py-2 rounded-lg text-sm font-medium bg-[#2864F0] text-white hover:bg-[#2878C8] transition disabled:opacity-50"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+export default AdminProducts
