@@ -7,13 +7,38 @@ const tabs = [
   { value: '', label: 'All' },
   { value: 'ACTIVE', label: 'Active' },
   { value: 'DRAFT', label: 'Draft' },
+  { value: 'REJECTED', label: 'Rejected' },
   { value: 'ARCHIVED', label: 'Archived' },
 ]
 
 const badgeColors = {
   ACTIVE: 'bg-green-50 text-green-700 border-green-200',
   DRAFT: 'bg-yellow-50 text-yellow-800 border-yellow-200',
+  REJECTED: 'bg-red-50 text-red-700 border-red-200',
   ARCHIVED: 'bg-gray-100 text-gray-700 border-gray-200',
+}
+
+// Allowed status changes (same rules as the backend)
+// DRAFT -> ACTIVE / REJECTED / ARCHIVED
+// ACTIVE -> ARCHIVED
+// REJECTED -> DRAFT / ARCHIVED
+// ARCHIVED -> ACTIVE
+const actionsByStatus = {
+  DRAFT: [
+    { to: 'ACTIVE', label: 'Activate', style: 'bg-green-600 text-white hover:bg-green-700' },
+    { to: 'REJECTED', label: 'Reject', style: 'bg-red-600 text-white hover:bg-red-700' },
+    { to: 'ARCHIVED', label: 'Archive', style: 'bg-gray-200 text-[#101A30] hover:bg-gray-300' },
+  ],
+  ACTIVE: [
+    { to: 'ARCHIVED', label: 'Archive', style: 'bg-gray-200 text-[#101A30] hover:bg-gray-300' },
+  ],
+  REJECTED: [
+    { to: 'DRAFT', label: 'Move to Draft', style: 'bg-yellow-500 text-white hover:bg-yellow-600' },
+    { to: 'ARCHIVED', label: 'Archive', style: 'bg-gray-200 text-[#101A30] hover:bg-gray-300' },
+  ],
+  ARCHIVED: [
+    { to: 'ACTIVE', label: 'Activate', style: 'bg-green-600 text-white hover:bg-green-700' },
+  ],
 }
 
 const PAGE_SIZE = 10
@@ -27,16 +52,7 @@ function formatDate(value) {
   })
 }
 
-// Show lowest price, or a range if variants have different prices
-function formatPrice(variants) {
-  const prices = (variants || [])
-    .map((v) => Number(v.price))
-    .filter((n) => !Number.isNaN(n))
-  if (prices.length === 0) return '-'
-  const min = Math.min(...prices)
-  const max = Math.max(...prices)
-  return min === max ? `₹${min}` : `₹${min} - ₹${max}`
-}
+
 
 function AdminProducts() {
   const [activeTab, setActiveTab] = useState('')
@@ -47,8 +63,11 @@ function AdminProducts() {
   const [pagination, setPagination] = useState({ page: 1, totalPages: 1, total: 0 })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
+  const [busyId, setBusyId] = useState(null) // product id currently being updated
+  const [refreshKey, setRefreshKey] = useState(0) // change this to reload the list
 
-  // Load products whenever status tab, search text or page changes
+  // Load products whenever status tab, search text, page or refreshKey changes
   useEffect(() => {
     let cancelled = false
 
@@ -61,13 +80,13 @@ function AdminProducts() {
         params.set('page', String(page))
         params.set('limit', String(PAGE_SIZE))
         if (activeTab) params.set('status', activeTab)
-        if (search) params.set('q', search)
+        if (search) params.set('search', search)
 
-        const res = await apiRequest(`/products/admin/all?${params.toString()}`)
+        const res = await apiRequest(`/admin/products?${params.toString()}`)
         if (!cancelled) {
-          // This API returns data as an array and pagination at the top level
-          setProducts(res.data || [])
-          setPagination(res.pagination || { page: 1, totalPages: 1, total: 0 })
+          // This API returns data.products and data.pagination
+          setProducts(res.data?.products || [])
+          setPagination(res.data?.pagination || { page: 1, totalPages: 1, total: 0 })
         }
       } catch (err) {
         if (!cancelled) setError(err.message || 'Something went wrong')
@@ -80,7 +99,7 @@ function AdminProducts() {
     return () => {
       cancelled = true
     }
-  }, [activeTab, search, page])
+  }, [activeTab, search, page, refreshKey])
 
   const handleTabChange = (value) => {
     setActiveTab(value)
@@ -99,11 +118,48 @@ function AdminProducts() {
     setPage(1)
   }
 
+  // Change product status (Activate / Reject / Archive / Move to Draft)
+  const handleStatusChange = async (product, action) => {
+    const payload = { status: action.to }
+
+    // Reject needs a reason (backend requires it)
+    if (action.to === 'REJECTED') {
+      const reason = window.prompt(`Reason for rejecting "${product.name}":`)
+      if (reason === null) return // admin cancelled
+      if (!reason.trim()) {
+        setError('Reason is required to reject a product.')
+        return
+      }
+      payload.reason = reason.trim()
+    } else if (action.to === 'ARCHIVED') {
+      const ok = window.confirm(`Archive "${product.name}"?`)
+      if (!ok) return
+    }
+
+    try {
+      setBusyId(product.id)
+      setError('')
+      setSuccess('')
+
+      await apiRequest(`/admin/products/${product.id}/status`, {
+        method: 'PATCH',
+        body: JSON.stringify(payload),
+      })
+
+      setSuccess(`"${product.name}" is now ${action.to}.`)
+      setRefreshKey((k) => k + 1) // reload list
+    } catch (err) {
+      setError(err.message || 'Could not update product status')
+    } finally {
+      setBusyId(null)
+    }
+  }
+
   return (
     <div>
       <h2 className="text-2xl font-bold text-[#101A30]">Products</h2>
       <p className="text-sm text-[#52647D] mt-1">
-        View all products from every seller. ({pagination.total} total)
+        Review and manage products from every seller. ({pagination.total} total)
       </p>
 
       {/* Status tabs */}
@@ -149,6 +205,12 @@ function AdminProducts() {
         )}
       </form>
 
+      {success && (
+        <div className="mt-5 rounded-lg bg-green-50 border border-green-200 text-green-700 px-4 py-3 text-sm">
+          {success}
+        </div>
+      )}
+
       {error && (
         <div className="mt-5 rounded-lg bg-red-50 border border-red-200 text-red-700 px-4 py-3 text-sm">
           {error}
@@ -167,9 +229,9 @@ function AdminProducts() {
                 <th className="px-6 py-4 font-medium">Product</th>
                 <th className="px-6 py-4 font-medium">Seller</th>
                 <th className="px-6 py-4 font-medium">Category</th>
-                <th className="px-6 py-4 font-medium">Price</th>
                 <th className="px-6 py-4 font-medium">Status</th>
                 <th className="px-6 py-4 font-medium">Created</th>
+                <th className="px-6 py-4 font-medium">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -187,9 +249,7 @@ function AdminProducts() {
                   <td className="px-6 py-4 text-[#52647D]">
                     {product.category?.name || '-'}
                   </td>
-                  <td className="px-6 py-4 text-[#101A30]">
-                    {formatPrice(product.variants)}
-                  </td>
+                  
                   <td className="px-6 py-4">
                     <span
                       className={`inline-block px-3 py-1 rounded-full border text-xs font-semibold ${
@@ -201,6 +261,20 @@ function AdminProducts() {
                   </td>
                   <td className="px-6 py-4 text-[#52647D]">
                     {formatDate(product.createdAt)}
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex flex-wrap gap-2">
+                      {(actionsByStatus[product.status] || []).map((action) => (
+                        <button
+                          key={action.to}
+                          disabled={busyId === product.id}
+                          onClick={() => handleStatusChange(product, action)}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition disabled:opacity-50 ${action.style}`}
+                        >
+                          {busyId === product.id ? 'Please wait...' : action.label}
+                        </button>
+                      ))}
+                    </div>
                   </td>
                 </tr>
               ))}

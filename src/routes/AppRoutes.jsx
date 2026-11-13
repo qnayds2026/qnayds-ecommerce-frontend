@@ -24,6 +24,7 @@ import AdminOrders from '../pages/AdminOrders'
 import AdminCategories from '../pages/AdminCategories'
 import AdminInventory from '../pages/AdminInventory'
 import AdminUsers from '../pages/AdminUsers'
+import AdminReports from '../pages/AdminReports'
 import AdminComingSoon from '../pages/AdminComingSoon'
 
 
@@ -63,7 +64,7 @@ function AppRoutes() {
             <Route path="/admin/orders" element={<AdminOrders />} />
             <Route path="/admin/categories" element={<AdminCategories />} />
             <Route path="/admin/inventory" element={<AdminInventory />} />
-            <Route path="/admin/reports" element={<AdminComingSoon title="Reports" />} />
+            <Route path="/admin/reports" element={<AdminReports />} />
             <Route path="/admin/settings" element={<AdminComingSoon title="Settings" />} />
           </Route>
         </Route>

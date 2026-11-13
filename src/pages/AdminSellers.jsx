@@ -62,7 +62,12 @@ function AdminSellers() {
         setError('')
         const query = activeTab ? `?status=${activeTab}` : ''
         const res = await apiRequest(`/sellers${query}`)
-        if (!cancelled) setSellers(res.data || [])
+        if (!cancelled) {
+          // API returns data.sellers (array) and data.pagination
+          // Array.isArray keeps this safe if the old array format comes back
+          const list = Array.isArray(res.data) ? res.data : res.data?.sellers
+          setSellers(list || [])
+        }
       } catch (err) {
         if (!cancelled) setError(err.message || 'Something went wrong')
       } finally {

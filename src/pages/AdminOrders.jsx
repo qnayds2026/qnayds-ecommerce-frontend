@@ -46,6 +46,14 @@ function formatStatus(status) {
   return (status || '').replace(/_/g, ' ')
 }
 
+// Unique shop names from sellerOrders (one order can have many sellers)
+function getSellerNames(order) {
+  const names = (order.sellerOrders || [])
+    .map((so) => so.seller?.shopName)
+    .filter(Boolean)
+  return [...new Set(names)].join(', ') || '-'
+}
+
 function AdminOrders() {
   const [activeTab, setActiveTab] = useState('')
   const [searchInput, setSearchInput] = useState('')
@@ -71,8 +79,9 @@ function AdminOrders() {
         if (activeTab) params.set('status', activeTab)
         if (search) params.set('search', search)
 
-        const res = await apiRequest(`/orders/admin/all?${params.toString()}`)
+        const res = await apiRequest(`/admin/orders?${params.toString()}`)
         if (!cancelled) {
+          // This API returns data.orders and data.pagination
           setOrders(res.data?.orders || [])
           setPagination(res.data?.pagination || { page: 1, totalPages: 1, total: 0 })
         }
@@ -136,7 +145,7 @@ function AdminOrders() {
           type="text"
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
-          placeholder="Search by order number, customer name or email"
+          placeholder="Search orders"
           className="w-full max-w-sm px-4 py-2 rounded-lg border border-gray-200 bg-white text-sm text-[#101A30] focus:outline-none focus:border-[#2864F0]"
         />
         <button
@@ -173,6 +182,7 @@ function AdminOrders() {
               <tr className="text-left text-[#52647D] border-b border-gray-100">
                 <th className="px-6 py-4 font-medium">Order #</th>
                 <th className="px-6 py-4 font-medium">Customer</th>
+                <th className="px-6 py-4 font-medium">Seller</th>
                 <th className="px-6 py-4 font-medium">Items</th>
                 <th className="px-6 py-4 font-medium">Amount</th>
                 <th className="px-6 py-4 font-medium">Status</th>
@@ -188,13 +198,14 @@ function AdminOrders() {
 
                 return (
                   <tr key={order.id} className="border-b border-gray-50 last:border-0">
-                    <td className="px-6 py-4 font-semibold text-[#101A30]">
+                    <td className="px-6 py-4 font-semibold text-[#101A30] whitespace-nowrap">
                       {order.orderNumber}
                     </td>
                     <td className="px-6 py-4">
-                      <p className="text-[#101A30]">{order.customer?.name || '-'}</p>
-                      <p className="text-xs text-[#52647D]">{order.customer?.email}</p>
+                      <p className="text-[#101A30]">{order.user?.name || '-'}</p>
+                      <p className="text-xs text-[#52647D]">{order.user?.email}</p>
                     </td>
+                    <td className="px-6 py-4 text-[#101A30]">{getSellerNames(order)}</td>
                     <td className="px-6 py-4 text-[#52647D]">{itemCount}</td>
                     <td className="px-6 py-4 text-[#101A30]">
                       {formatAmount(order.totalAmount)}
