@@ -23,6 +23,7 @@ import Addresses       from '../pages/Addresses'
 import OrderDetails    from '../pages/OrderDetails'
 import CustomerProfile from '../pages/CustomerProfile'
 import BecomeSeller    from '../pages/BecomeSeller'
+import NotificationsPage from '../pages/NotificationsPage'
 
 // Admin pages
 import AdminDashboard  from '../pages/AdminDashboard'
@@ -57,7 +58,6 @@ function AppRoutes() {
           <Route path="/product/:id" element={<ProductDetails />} />
           <Route path="/products"    element={<Products />} />
           <Route path="/categories"  element={<Categories />} />
-          <Route path="/become-seller" element={<BecomeSeller />} />
 
           {/* Customer-only */}
           <Route element={<ProtectedRoute allowedRoles={['CUSTOMER']} />}>
@@ -68,6 +68,9 @@ function AppRoutes() {
             <Route path="/orders/:orderId" element={<OrderDetails />} />
             <Route path="/addresses"       element={<Addresses />} />
             <Route path="/customer"        element={<CustomerProfile />} />
+            <Route path="/notifications" element={<NotificationsPage />} />
+            <Route path="/become-seller" element={<BecomeSeller />} />
+            
           </Route>
         </Route>
 

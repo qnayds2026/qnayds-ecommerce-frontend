@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { useDispatch } from 'react-redux'
 import { apiRequest } from '../services/api'
+import { addToCart } from '../store/cartSlice'
 
 // Get the cheapest active variant
 function getStartingVariant(product) {
@@ -35,8 +37,15 @@ function getCategoryIcon(name) {
   return categoryIcons[(name || '').trim().toLowerCase()] || null
 }
 
+// How many products to show before "View All" is clicked
+const INITIAL_PRODUCT_COUNT = 8
+
+// How many categories to show before "View All" is clicked
+const INITIAL_CATEGORY_COUNT = 6
+
 function Home() {
   const navigate = useNavigate()
+  const dispatch = useDispatch()
 
   const [categories, setCategories] = useState([])
   const [products, setProducts] = useState([])
@@ -46,6 +55,8 @@ function Home() {
   const [actionMessage, setActionMessage] = useState('')
   const [actionError, setActionError] = useState('')
   const [processingId, setProcessingId] = useState('')
+  const [showAll, setShowAll] = useState(false)
+  const [showAllCategories, setShowAllCategories] = useState(false)
 
   const token = sessionStorage.getItem('accessToken')
 
@@ -65,7 +76,7 @@ function Home() {
         if (cancelled) return
 
         setCategories(categoryRes.data || [])
-        setProducts((productRes.data || []).slice(0, 8))
+        setProducts(productRes.data || [])
       } catch (err) {
         if (!cancelled) setError(err.message || 'Something went wrong')
       } finally {
@@ -167,21 +178,29 @@ function Home() {
     setActionError('')
 
     try {
-      await apiRequest('/cart/items', {
-        method: 'POST',
-        body: JSON.stringify({
-          variantId: variant.id,
-          quantity: 1,
-        }),
-      })
+      await dispatch(
+        addToCart({ variantId: variant.id, quantity: 1 })
+      ).unwrap()
 
       setActionMessage('Product added to cart successfully!')
     } catch (err) {
-      setActionError(err.message || 'Could not add product to cart.')
+      setActionError(
+        typeof err === 'string'
+          ? err
+          : err?.message || 'Could not add product to cart.'
+      )
     } finally {
       setProcessingId('')
     }
   }
+
+  const visibleCategories = showAllCategories
+    ? categories
+    : categories.slice(0, INITIAL_CATEGORY_COUNT)
+
+  const visibleProducts = showAll
+    ? products
+    : products.slice(0, INITIAL_PRODUCT_COUNT)
 
   return (
     <div className="bg-white">
@@ -258,12 +277,15 @@ function Home() {
               </p>
             </div>
 
-            <Link
-              to="/categories"
-              className="text-sm font-semibold text-[#2864F0] hover:text-[#2878C8]"
-            >
-              View All →
-            </Link>
+            {categories.length > INITIAL_CATEGORY_COUNT && (
+              <button
+                type="button"
+                onClick={() => setShowAllCategories((prev) => !prev)}
+                className="text-sm font-semibold text-[#2864F0] hover:text-[#2878C8]"
+              >
+                {showAllCategories ? 'Show Less ↑' : 'View All →'}
+              </button>
+            )}
           </div>
 
           {loading ? (
@@ -274,7 +296,7 @@ function Home() {
             </div>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                            {categories.map((category) => {
+              {visibleCategories.map((category) => {
                 const icon = getCategoryIcon(category.name)
 
                 return (
@@ -324,12 +346,15 @@ function Home() {
               </p>
             </div>
 
-            <Link
-              to="/products"
-              className="text-sm font-semibold text-[#2864F0] hover:text-[#2878C8]"
-            >
-              View All →
-            </Link>
+            {products.length > INITIAL_PRODUCT_COUNT && (
+              <button
+                type="button"
+                onClick={() => setShowAll((prev) => !prev)}
+                className="text-sm font-semibold text-[#2864F0] hover:text-[#2878C8]"
+              >
+                {showAll ? 'Show Less ↑' : 'View All →'}
+              </button>
+            )}
           </div>
 
           {loading ? (
@@ -346,7 +371,7 @@ function Home() {
             </div>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-              {products.map((product) => {
+              {visibleProducts.map((product) => {
                 const image = getProductImage(product)
                 const variant = getStartingVariant(product)
                 const price = variant ? Number(variant.price) : null
