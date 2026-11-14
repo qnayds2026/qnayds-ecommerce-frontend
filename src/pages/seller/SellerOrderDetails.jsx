@@ -125,7 +125,7 @@ function SellerOrderDetails() {
 
   const nextStatuses = NEXT_STATUS[order.status] || []
   const canShip      = ['CONFIRMED', 'PROCESSING'].includes(order.status) && !order.shipment
-  const addr         = order.order?.deliveryAddress
+  const parentOrder  = order.order
 
   return (
     <div className="max-w-3xl space-y-5">
@@ -268,16 +268,16 @@ function SellerOrderDetails() {
               <h3 className="font-semibold text-[#101A30]">Delivery Address</h3>
             </div>
             <div className="px-5 py-4 text-sm space-y-0.5">
-              {addr ? (
+              {parentOrder ? (
                 <>
-                  <p className="font-semibold text-[#101A30]">{addr.name || order.order?.user?.name}</p>
-                  <p className="text-[#52647D]">{addr.line1}</p>
-                  {addr.line2 && <p className="text-[#52647D]">{addr.line2}</p>}
+                  <p className="font-semibold text-[#101A30]">{parentOrder.deliveryName}</p>
+                  <p className="text-[#52647D]">{parentOrder.deliveryAddressLine1}</p>
+                  {parentOrder.deliveryAddressLine2 && <p className="text-[#52647D]">{parentOrder.deliveryAddressLine2}</p>}
                   <p className="text-[#52647D]">
-                    {[addr.city, addr.state, addr.postalCode].filter(Boolean).join(', ')}
+                    {[parentOrder.deliveryCity, parentOrder.deliveryState, parentOrder.deliveryPostalCode].filter(Boolean).join(', ')}
                   </p>
-                  {addr.country && <p className="text-[#52647D]">{addr.country}</p>}
-                  {addr.phone   && <p className="text-[#52647D]">{addr.phone}</p>}
+                  {parentOrder.deliveryCountry && <p className="text-[#52647D]">{parentOrder.deliveryCountry}</p>}
+                  {parentOrder.deliveryPhone   && <p className="text-[#52647D]">{parentOrder.deliveryPhone}</p>}
                 </>
               ) : (
                 <p className="text-[#52647D]">No address info available.</p>

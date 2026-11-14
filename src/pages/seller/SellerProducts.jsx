@@ -7,7 +7,7 @@
 import sellerService from '../../api/service/sellerService'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Package, Plus, Edit2, Archive, Eye } from 'lucide-react'
+import { Package, Plus, Edit2, Archive, ArchiveRestore } from 'lucide-react'
 
 const STATUS_COLOR = {
   ACTIVE:   'bg-green-100  text-green-700',
@@ -21,7 +21,8 @@ function SellerProducts() {
   const [products,  setProducts]  = useState([])
   const [loading,   setLoading]   = useState(true)
   const [error,     setError]     = useState('')
-  const [archiving, setArchiving] = useState(null)
+  const [archiving,  setArchiving]  = useState(null)
+  const [unarchiving,setUnarchiving]= useState(null)
   const [filter,    setFilter]    = useState('ALL')
 
   useEffect(() => {
@@ -41,6 +42,19 @@ function SellerProducts() {
       alert(err.message)
     } finally {
       setArchiving(null)
+    }
+  }
+
+  const handleUnarchive = async (id) => {
+    if (!window.confirm('Restore this product and make it Active again?')) return
+    setUnarchiving(id)
+    try {
+      await sellerService.updateProduct(id, { status: 'ACTIVE' })
+      setProducts(prev => prev.map(p => p.id === id ? { ...p, status: 'ACTIVE' } : p))
+    } catch (err) {
+      alert(err.message)
+    } finally {
+      setUnarchiving(null)
     }
   }
 
@@ -169,12 +183,7 @@ function SellerProducts() {
                       {/* Actions */}
                       <td className="px-5 py-3">
                         <div className="flex items-center justify-end gap-1">
-                          {p.status === 'ACTIVE' && (
-                            <Link to={`/product/${p.id}`} target="_blank"
-                              className="p-1.5 text-gray-400 hover:text-[#2864F0] rounded-lg hover:bg-blue-50" title="View on store">
-                              <Eye size={16} />
-                            </Link>
-                          )}
+
                           <Link to={`/seller/products/${p.id}/edit`}
                             className="p-1.5 text-gray-400 hover:text-[#2864F0] rounded-lg hover:bg-blue-50" title="Edit">
                             <Edit2 size={16} />
@@ -183,6 +192,12 @@ function SellerProducts() {
                             <button onClick={() => handleArchive(p.id)} disabled={archiving === p.id}
                               className="p-1.5 text-gray-400 hover:text-red-500 rounded-lg hover:bg-red-50 disabled:opacity-50" title="Archive">
                               <Archive size={16} />
+                            </button>
+                          )}
+                          {p.status === 'ARCHIVED' && (
+                            <button onClick={() => handleUnarchive(p.id)} disabled={unarchiving === p.id}
+                              className="p-1.5 text-gray-400 hover:text-green-600 rounded-lg hover:bg-green-50 disabled:opacity-50" title="Restore to Active">
+                              <ArchiveRestore size={16} />
                             </button>
                           )}
                         </div>
