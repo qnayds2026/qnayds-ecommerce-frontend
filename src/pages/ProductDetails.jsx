@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useDispatch } from 'react-redux'
 import { apiRequest } from '../services/api'
+import { addToCart } from '../store/cartSlice'
 
 function ProductDetails() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const dispatch = useDispatch()
 
   const [product, setProduct] = useState(null)
   const [selectedVariantId, setSelectedVariantId] = useState(null)
@@ -83,27 +86,31 @@ function ProductDetails() {
     return false
   }
 
+  // Returns true when the item was added successfully
   const handleAddToCart = async () => {
-    if (requireLogin()) return
-    if (!selectedVariantId) return
+    if (requireLogin()) return false
+    if (!selectedVariantId) return false
     try {
       setAdding(true)
       setMessage('')
-      await apiRequest('/cart/items', {
-        method: 'POST',
-        body: JSON.stringify({ variantId: selectedVariantId, quantity: 1 }),
-      })
+      await dispatch(
+        addToCart({ variantId: selectedVariantId, quantity: 1 })
+      ).unwrap()
       setMessage('Added to cart')
+      return true
     } catch (err) {
-      setMessage(err.message || 'Could not add to cart')
+      setMessage(
+        typeof err === 'string' ? err : err?.message || 'Could not add to cart'
+      )
+      return false
     } finally {
       setAdding(false)
     }
   }
 
   const handleBuyNow = async () => {
-    await handleAddToCart()
-    if (sessionStorage.getItem('accessToken')) navigate('/cart')
+    const added = await handleAddToCart()
+    if (added) navigate('/cart')
   }
 
   const handleWishlist = async () => {

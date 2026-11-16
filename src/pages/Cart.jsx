@@ -1,57 +1,45 @@
-
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { apiRequest } from '../services/api'
+import { useDispatch, useSelector } from 'react-redux'
+import { fetchCart, updateCartItem, removeCartItem } from '../store/cartSlice'
 
 function Cart() {
   const navigate = useNavigate()
-  const [cart, setCart] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
+  const dispatch = useDispatch()
 
-  const loadCart = async () => {
-    try {
-      const response = await apiRequest('/cart')
-      setCart(response.data)
-    } catch (err) {
-      setError(err.message || 'Unable to load cart')
-    } finally {
-      setLoading(false)
-    }
-  }
+  const { data: cart, loading, error } = useSelector((state) => state.cart)
+  const [actionError, setActionError] = useState('')
 
   useEffect(() => {
     if (!sessionStorage.getItem('accessToken')) {
       navigate('/login')
       return
     }
-    loadCart()
-  }, [])
+    dispatch(fetchCart())
+  }, [dispatch, navigate])
+
+  const errorText = (err) =>
+    typeof err === 'string' ? err : err?.message || 'Something went wrong'
 
   const updateQuantity = async (item, quantity) => {
+    setActionError('')
     try {
-      const response = await apiRequest(`/cart/items/${item.id}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ quantity }),
-      })
-      setCart(response.data)
+      await dispatch(updateCartItem({ itemId: item.id, quantity })).unwrap()
     } catch (err) {
-      setError(err.message)
+      setActionError(errorText(err))
     }
   }
 
   const removeItem = async (itemId) => {
+    setActionError('')
     try {
-      const response = await apiRequest(`/cart/items/${itemId}`, {
-        method: 'DELETE',
-      })
-      await loadCart()
+      await dispatch(removeCartItem(itemId)).unwrap()
     } catch (err) {
-      setError(err.message)
+      setActionError(errorText(err))
     }
   }
 
-  if (loading) {
+  if (loading && !cart) {
     return <div className="p-10 text-center">Loading cart...</div>
   }
 
@@ -80,7 +68,7 @@ function Cart() {
       <div className="max-w-6xl mx-auto">
         <h1 className="text-3xl font-bold text-[#101A30] mb-8">Shopping Cart</h1>
 
-        {error && <p className="text-red-500 mb-4">{error}</p>}
+        {actionError && <p className="text-red-500 mb-4">{actionError}</p>}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-4">
