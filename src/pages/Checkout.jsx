@@ -24,6 +24,8 @@ function Checkout() {
   const [saving, setSaving] = useState(false)
   const [placing, setPlacing] = useState(false)
   const [error, setError] = useState('')
+  // Only COD is available for now (Online payment is not ready)
+  const [paymentMethod, setPaymentMethod] = useState('COD')
 
   // Load cart and addresses
   useEffect(() => {
@@ -81,7 +83,7 @@ function Checkout() {
     }
   }
 
-  // Place the order
+  // Place the order (checkout creates the order and the COD payment row together)
   const handlePlaceOrder = async () => {
     if (!selectedId) {
       setError('Please select a delivery address.')
@@ -90,10 +92,10 @@ function Checkout() {
     setPlacing(true)
     setError('')
     try {
-        await apiRequest('/orders', {
+      await apiRequest('/checkout', {
         method: 'POST',
         headers: { 'Idempotency-Key': crypto.randomUUID() },
-        body: JSON.stringify({ addressId: selectedId }),
+        body: JSON.stringify({ addressId: selectedId, paymentMethod }),
       })
       navigate('/orders')
     } catch (err) {
@@ -288,6 +290,34 @@ function Checkout() {
             <div className="border-t mt-3 pt-3 flex justify-between font-bold text-[#101A30]">
               <span>Total</span>
               <span>₹{Number(cart.subtotal).toLocaleString('en-IN')}</span>
+            </div>
+
+            {/* Payment method */}
+            <div className="mt-5">
+              <h3 className="text-sm font-bold text-[#101A30] mb-2">Payment Method</h3>
+
+              <label
+                className={`flex items-center gap-3 border rounded-lg p-3 mb-2 cursor-pointer ${
+                  paymentMethod === 'COD'
+                    ? 'border-[#2864F0] bg-[#2864F0]/5'
+                    : 'border-gray-200'
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="paymentMethod"
+                  checked={paymentMethod === 'COD'}
+                  onChange={() => setPaymentMethod('COD')}
+                />
+                <span className="text-sm text-[#101A30]">Cash on Delivery</span>
+              </label>
+
+              <label className="flex items-center gap-3 border border-gray-200 rounded-lg p-3 opacity-50 cursor-not-allowed">
+                <input type="radio" name="paymentMethod" disabled />
+                <span className="text-sm text-[#52647D]">
+                  Online payment <span className="text-xs">(Coming soon)</span>
+                </span>
+              </label>
             </div>
 
             <button
