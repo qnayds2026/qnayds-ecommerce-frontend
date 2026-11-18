@@ -27,6 +27,18 @@ const PAYMENT_FILTERS = [
   { key: 'COD', label: 'COD' },
 ]
 
+// Labels for the shipment badge
+const shipmentLabels = {
+  READY_TO_SHIP: 'Ready to ship',
+  PACKED: 'Packed',
+  SHIPPED: 'Shipped',
+  IN_TRANSIT: 'In transit',
+  OUT_FOR_DELIVERY: 'Out for delivery',
+  DELIVERED: 'Delivered',
+  DELIVERY_FAILED: 'Delivery failed',
+  RETURN_TO_ORIGIN: 'Returned to seller',
+}
+
 function formatPrice(value) {
   return `₹${Number(value || 0).toLocaleString('en-IN')}`
 }
@@ -46,6 +58,15 @@ function getPaymentMethod(order) {
   const payments = order.payments
   if (!Array.isArray(payments) || payments.length === 0) return null
   return payments[payments.length - 1].method || null
+}
+
+// Latest shipment status of an order (one order can have several sellers)
+function getShipmentStatus(order) {
+  const shipments = (order.sellerOrders || [])
+    .map((so) => so.shipment)
+    .filter(Boolean)
+  if (shipments.length === 0) return null
+  return shipments[shipments.length - 1].status
 }
 
 // Date when the order reached a status (from order-level status history)
@@ -323,6 +344,7 @@ function Orders() {
             <div className="space-y-4">
               {filteredOrders.map((order) => {
                 const info = getStatusInfo(order)
+                const shipmentStatus = getShipmentStatus(order)
                 return (order.orderItems || []).map((item) => (
                   <Link
                     key={item.id}
@@ -373,6 +395,11 @@ function Orders() {
                         <p className="text-xs text-[#52647D] mt-2">
                           {info.message}
                         </p>
+                        {shipmentStatus && (
+                          <span className="inline-block mt-2 text-xs font-semibold px-2.5 py-1 rounded-full bg-[#F0F0F8] text-[#2864F0]">
+                            Shipment: {shipmentLabels[shipmentStatus] || shipmentStatus}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </Link>

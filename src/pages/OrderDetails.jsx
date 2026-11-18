@@ -17,8 +17,115 @@ function formatDate(value) {
   })
 }
 
+function formatDay(value) {
+  if (!value) return '-'
+  return new Date(value).toLocaleDateString('en-IN', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  })
+}
+
 function formatStatus(status) {
   return (status || '').replaceAll('_', ' ')
+}
+
+// Steps shown in the tracking timeline (same order as the backend flow)
+const TRACK_STEPS = [
+  { key: 'PACKED', label: 'Packed', text: 'Seller has packed your item' },
+  { key: 'SHIPPED', label: 'Shipped', text: 'Your item has been shipped' },
+  { key: 'IN_TRANSIT', label: 'In transit', text: 'Your item is on the way' },
+  { key: 'OUT_FOR_DELIVERY', label: 'Out for delivery', text: 'Your item is out for delivery' },
+  { key: 'DELIVERED', label: 'Delivered', text: 'Your item has been delivered' },
+]
+
+function stepIndex(status) {
+  // READY_TO_SHIP is before PACKED, so it returns -1
+  return TRACK_STEPS.findIndex((s) => s.key === status)
+}
+
+function ShipmentTimeline({ shipment, orderPlacedAt }) {
+  const current = stepIndex(shipment.status)
+  const failed = shipment.status === 'DELIVERY_FAILED'
+  const returned = shipment.status === 'RETURN_TO_ORIGIN'
+  const showExpected =
+    shipment.estimatedDeliveryAt &&
+    shipment.status !== 'DELIVERED' &&
+    shipment.status !== 'RETURN_TO_ORIGIN'
+
+  const dot = (done) =>
+    `absolute -left-[9px] top-1 w-4 h-4 rounded-full border-2 ${
+      done ? 'bg-green-500 border-green-500' : 'bg-white border-gray-300'
+    }`
+
+  return (
+    <div>
+      {showExpected && (
+        <p className="mb-4 text-sm text-[#101A30]">
+          <span className="text-[#52647D]">Expected delivery: </span>
+          <span className="font-semibold">{formatDay(shipment.estimatedDeliveryAt)}</span>
+        </p>
+      )}
+
+      <ol className="border-l-2 border-gray-200 ml-2 space-y-6">
+        <li className="pl-6 relative">
+          <span className={dot(true)} />
+          <p className="font-medium text-[#101A30]">Order Confirmed</p>
+          <p className="text-xs text-[#52647D] mt-0.5">{formatDate(orderPlacedAt)}</p>
+        </li>
+
+        {TRACK_STEPS.map((step, i) => {
+          const done = current >= i
+          return (
+            <li key={step.key} className="pl-6 relative">
+              <span className={dot(done)} />
+              <p className={`font-medium ${done ? 'text-[#101A30]' : 'text-gray-400'}`}>
+                {step.label}
+              </p>
+              {done && <p className="text-sm text-[#52647D] mt-0.5">{step.text}</p>}
+
+              {step.key === 'SHIPPED' && done && (
+                <div className="mt-1 text-sm">
+                  <p className="text-[#101A30]">
+                    {shipment.carrierName} - {shipment.trackingNumber}
+                  </p>
+                  {shipment.shippedAt && (
+                    <p className="text-xs text-[#52647D]">{formatDate(shipment.shippedAt)}</p>
+                  )}
+                  {shipment.trackingUrl && (
+                    <a
+                      href={shipment.trackingUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-xs text-[#2864F0] hover:underline"
+                    >
+                      Track shipment
+                    </a>
+                  )}
+                </div>
+              )}
+            </li>
+          )
+        })}
+
+        {failed && (
+          <li className="pl-6 relative">
+            <span className="absolute -left-[9px] top-1 w-4 h-4 rounded-full border-2 bg-red-500 border-red-500" />
+            <p className="font-medium text-red-600">Delivery failed</p>
+            <p className="text-sm text-[#52647D] mt-0.5">
+              Delivery attempt was unsuccessful
+            </p>
+          </li>
+        )}
+        {returned && (
+          <li className="pl-6 relative">
+            <span className="absolute -left-[9px] top-1 w-4 h-4 rounded-full border-2 bg-gray-500 border-gray-500" />
+            <p className="font-medium text-[#101A30]">Returned to seller</p>
+          </li>
+        )}
+      </ol>
+    </div>
+  )
 }
 
 function OrderDetails() {
@@ -101,6 +208,11 @@ function OrderDetails() {
   const items = order.orderItems || []
   const canCancel = order.status === 'PENDING_PAYMENT'
 
+  // Shipments of all seller orders (one order can have several sellers)
+  const shipments = (order.sellerOrders || [])
+    .map((so) => so.shipment)
+    .filter(Boolean)
+
   return (
     <div className="max-w-5xl mx-auto px-4 md:px-6 py-8">
       <Link to="/orders" className="text-sm text-[#2864F0] font-medium">
@@ -173,6 +285,21 @@ function OrderDetails() {
           <p className="text-sm text-[#52647D]">{order.deliveryCountry}</p>
         </section>
       </div>
+
+      {/* Shipping */}
+      <section className="bg-white rounded-lg shadow-sm p-5 md:p-6 mt-5">
+        <h2 className="text-lg font-semibold text-[#101A30] mb-4">Shipping</h2>
+
+        {shipments.length === 0 ? (
+          <p className="text-sm text-[#52647D]">Not shipped yet.</p>
+        ) : (
+          <div className="space-y-8">
+            {shipments.map((s) => (
+              <ShipmentTimeline key={s.id} shipment={s} orderPlacedAt={order.createdAt} />
+            ))}
+          </div>
+        )}
+      </section>
 
       {/* Status history */}
       <section className="bg-white rounded-lg shadow-sm p-5 md:p-6 mt-5">

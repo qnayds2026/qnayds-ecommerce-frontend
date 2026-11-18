@@ -1,7 +1,18 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom'
-import { apiRequest } from '../services/api'
-import { CircleUser, Package, MapPin, Bell, LogOut } from 'lucide-react'
+import { useDispatch, useSelector } from 'react-redux'
+import { fetchCart, clearCart } from '../store/cartSlice'
+import {
+  CircleUser,
+  Package,
+  MapPin,
+  Bell,
+  LogOut,
+  Heart,
+  ShoppingCart,
+  Store,
+} from 'lucide-react'
+import NotificationBell from './NotificationBell'
 
 // Category id is the same as the slug returned by GET /categories
 const navCategories = [
@@ -24,9 +35,10 @@ function getStoredUser() {
 
 function Navbar() {
   const navigate = useNavigate()
+  const dispatch = useDispatch()
+  const cartCount = useSelector((state) => state.cart.data?.itemCount ?? 0)
   const location = useLocation()
   const [user, setUser] = useState(getStoredUser())
-  const [cartCount, setCartCount] = useState(0)
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef(null)
 
@@ -53,13 +65,11 @@ function Navbar() {
 
     const token = sessionStorage.getItem('accessToken')
     if (token && currentUser?.role === 'CUSTOMER') {
-      apiRequest('/cart')
-        .then((res) => setCartCount(res?.data?.itemCount ?? 0))
-        .catch(() => setCartCount(0))
+      dispatch(fetchCart())
     } else {
-      setCartCount(0)
+      dispatch(clearCart())
     }
-  }, [location.pathname])
+  }, [location.pathname, dispatch])
 
   const displayName =
     user?.name ||
@@ -78,7 +88,7 @@ function Navbar() {
     sessionStorage.removeItem('accessToken')
     sessionStorage.removeItem('user')
     setUser(null)
-    setCartCount(0)
+    dispatch(clearCart())
     setMenuOpen(false)
     navigate('/login')
   }
@@ -115,7 +125,7 @@ function Navbar() {
 
             {/* Customer Actions */}
             <div className="flex items-center gap-5 text-[#101A30]">
-                            {user?.role === 'CUSTOMER' && (
+              {(!user || user.role === 'CUSTOMER') && (
                 <Link
                   to="/become-seller"
                   className="hidden md:block hover:text-[#2864F0] text-sm font-medium"
@@ -126,22 +136,28 @@ function Navbar() {
 
               <Link
                 to="/wishlist"
-                className="hidden sm:block hover:text-[#2864F0] text-sm font-medium"
+                aria-label="Wishlist"
+                title="Wishlist"
+                className="hidden sm:flex items-center hover:text-[#2864F0]"
               >
-                ♡ Wishlist
+                <Heart size={22} strokeWidth={1.5} />
               </Link>
 
               <Link
                 to="/cart"
-                className="relative hover:text-[#2864F0] text-sm font-medium"
+                aria-label="Cart"
+                title="Cart"
+                className="relative flex items-center hover:text-[#2864F0]"
               >
-                🛒 Cart
+                <ShoppingCart size={22} strokeWidth={1.5} />
                 {cartCount > 0 && (
-                  <span className="absolute -top-2 -right-4 bg-[#2864F0] text-white text-[10px] font-bold min-w-[18px] h-[18px] px-1 rounded-full flex items-center justify-center">
+                  <span className="absolute -top-2 -right-2 bg-[#2864F0] text-white text-[10px] font-bold min-w-[18px] h-[18px] px-1 rounded-full flex items-center justify-center">
                     {cartCount}
                   </span>
                 )}
               </Link>
+
+              {user?.role === 'CUSTOMER' && <NotificationBell />}
 
               {user ? (
                 <div className="relative" ref={menuRef}>
@@ -159,59 +175,76 @@ function Navbar() {
                   </button>
 
                   {menuOpen && (
-  <div className="absolute right-0 mt-3 w-72 bg-white rounded-xl shadow-lg border border-gray-100 py-3 z-50">
-    {/* Heading */}
-    <p className="px-6 pb-2 text-sm font-semibold text-[#101A30]">
-      Your Account
-    </p>
+                    <div className="absolute right-0 mt-3 w-72 bg-white rounded-xl shadow-lg border border-gray-100 py-3 z-50">
+                      {/* Heading */}
+                      <p className="px-6 pb-2 text-sm font-semibold text-[#101A30]">
+                        Your Account
+                      </p>
 
-    {/* My Profile (goes to the dashboard of the logged-in role) */}
-    <Link
-      to={dashboardPath}
-      className="flex items-center gap-4 px-6 py-3 text-sm text-[#101A30] hover:bg-[#F0F0F8]"
-    >
-      <CircleUser size={20} strokeWidth={1.5} />
-      My Profile
-    </Link>
+                      {/* My Profile (goes to the dashboard of the logged-in role) */}
+                      <Link
+                        to={dashboardPath}
+                        className="flex items-center gap-4 px-6 py-3 text-sm text-[#101A30] hover:bg-[#F0F0F8]"
+                      >
+                        <CircleUser size={20} strokeWidth={1.5} />
+                        My Profile
+                      </Link>
 
-    {user?.role === 'CUSTOMER' && (
-      <>
-        <Link
-          to="/orders"
-          className="flex items-center gap-4 px-6 py-3 text-sm text-[#101A30] hover:bg-[#F0F0F8]"
-        >
-          <Package size={20} strokeWidth={1.5} />
-          Orders
-        </Link>
+                      {user?.role === 'CUSTOMER' && (
+                        <>
+                          <Link
+                            to="/orders"
+                            className="flex items-center gap-4 px-6 py-3 text-sm text-[#101A30] hover:bg-[#F0F0F8]"
+                          >
+                            <Package size={20} strokeWidth={1.5} />
+                            Orders
+                          </Link>
 
-        <Link
-          to="/addresses"
-          className="flex items-center gap-4 px-6 py-3 text-sm text-[#101A30] hover:bg-[#F0F0F8]"
-        >
-          <MapPin size={20} strokeWidth={1.5} />
-          Saved Addresses
-        </Link>
+                          <Link
+                            to="/wishlist"
+                            className="flex items-center gap-4 px-6 py-3 text-sm text-[#101A30] hover:bg-[#F0F0F8]"
+                          >
+                            <Heart size={20} strokeWidth={1.5} />
+                            Wishlist
+                          </Link>
 
-        <Link
-          to="/notifications"
-          className="flex items-center gap-4 px-6 py-3 text-sm text-[#101A30] hover:bg-[#F0F0F8]"
-        >
-          <Bell size={20} strokeWidth={1.5} />
-          Notifications
-        </Link>
-      </>
-    )}
+                          <Link
+                            to="/addresses"
+                            className="flex items-center gap-4 px-6 py-3 text-sm text-[#101A30] hover:bg-[#F0F0F8]"
+                          >
+                            <MapPin size={20} strokeWidth={1.5} />
+                            Saved Addresses
+                          </Link>
 
-    {/* Logout */}
-    <button
-      onClick={handleLogout}
-      className="w-full flex items-center gap-4 px-6 py-3 text-sm text-[#101A30] hover:bg-[#F0F0F8]"
-    >
-      <LogOut size={20} strokeWidth={1.5} />
-      Logout
-    </button>
-  </div>
-)}
+                          <Link
+                            to="/notifications"
+                            className="flex items-center gap-4 px-6 py-3 text-sm text-[#101A30] hover:bg-[#F0F0F8]"
+                          >
+                            <Bell size={20} strokeWidth={1.5} />
+                            Notifications
+                          </Link>
+
+                          {/* Mobile only: the navbar link is hidden on small screens */}
+                          <Link
+                            to="/become-seller"
+                            className="md:hidden flex items-center gap-4 px-6 py-3 text-sm text-[#101A30] hover:bg-[#F0F0F8]"
+                          >
+                            <Store size={20} strokeWidth={1.5} />
+                            Become a Seller
+                          </Link>
+                        </>
+                      )}
+
+                      {/* Logout */}
+                      <button
+                        onClick={handleLogout}
+                        className="w-full flex items-center gap-4 px-6 py-3 text-sm text-[#101A30] hover:bg-[#F0F0F8]"
+                      >
+                        <LogOut size={20} strokeWidth={1.5} />
+                        Logout
+                      </button>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <Link
