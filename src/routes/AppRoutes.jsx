@@ -47,6 +47,7 @@ import SellerOrderDetails  from '../pages/seller/SellerOrderDetails'
 import SellerReturns       from '../pages/seller/SellerReturns'
 import SellerInventory     from '../pages/seller/SellerInventory'
 import SellerShipments     from '../pages/seller/SellerShipments'
+import SellerPayments      from '../pages/seller/SellerPayments'
 
 function AppRoutes() {
   return (
@@ -104,6 +105,7 @@ function AppRoutes() {
             <Route path="/seller/returns"           element={<SellerReturns />} />
             <Route path="/seller/shipments"         element={<SellerShipments />} />
             <Route path="/seller/inventory"         element={<SellerInventory />} />
+            <Route path="/seller/payments"          element={<SellerPayments />} />
           </Route>
         </Route>
 

@@ -3,7 +3,7 @@ import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard, Store, Package, ShoppingBag,
   RotateCcw, Boxes, Truck, ChevronLeft, ChevronRight,
-  LogOut, Menu, X,
+  LogOut, Menu, X, CreditCard,
 } from 'lucide-react'
 import sellerService from '../api/service/sellerService'
 
@@ -20,6 +20,7 @@ const navItems = [
   { to: '/seller/shipments',  label: 'Shipments',  icon: Truck },
   { to: '/seller/returns',    label: 'Returns',    icon: RotateCcw },
   { to: '/seller/inventory',  label: 'Inventory',  icon: Boxes },
+  { to: '/seller/payments',   label: 'Payments',   icon: CreditCard },
 ]
 
 /* ── Sidebar defined OUTSIDE SellerLayout to avoid remount on every render ── */
@@ -131,7 +132,7 @@ function SellerLayout() {
     <div className="min-h-screen flex bg-[#F0F0F8]">
 
       {/* Desktop sidebar */}
-      <aside className={`hidden md:flex flex-col bg-[#2864F0] transition-all duration-300 shrink-0 sticky top-0 self-start h-screen ${collapsed ? 'w-16' : 'w-60'}`}>
+      <aside className={`hidden md:flex flex-col bg-[#0F1C2E] transition-all duration-300 shrink-0 sticky top-0 self-start h-screen ${collapsed ? 'w-16' : 'w-60'}`}>
         <SidebarContent mobile={false} {...sidebarProps} />
       </aside>
 
@@ -140,7 +141,7 @@ function SellerLayout() {
         <div className="fixed inset-0 bg-black/40 z-40 md:hidden" onClick={() => setMobileOpen(false)} />
       )}
       {/* Mobile drawer */}
-      <aside className={`fixed top-0 left-0 h-full w-64 bg-[#2864F0] z-50 md:hidden transition-transform duration-300 ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+      <aside className={`fixed top-0 left-0 h-full w-64 bg-[#0F1C2E] z-50 md:hidden transition-transform duration-300 ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <SidebarContent mobile={true} {...sidebarProps} />
       </aside>
 
