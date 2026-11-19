@@ -15,6 +15,8 @@ import {
   Truck,
   Menu,
   X,
+  RotateCcw,
+
 } from 'lucide-react'
 
 // Sidebar menu items (pages are added step by step)
@@ -22,10 +24,11 @@ const menuItems = [
   { to: '/admin', label: 'Dashboard', icon: LayoutDashboard, end: true },
   { to: '/admin/sellers', label: 'Sellers', icon: Store },
   { to: '/admin/users', label: 'Users', icon: Users },
+  { to: '/admin/categories', label: 'Categories', icon: Tags },
   { to: '/admin/products', label: 'Products', icon: Package },
   { to: '/admin/orders', label: 'Orders', icon: ShoppingBag },
   { to: '/admin/shipments', label: 'Shipping', icon: Truck },
-  { to: '/admin/categories', label: 'Categories', icon: Tags },
+  { to: '/admin/returns', label: 'Returns', icon: RotateCcw },
   { to: '/admin/inventory', label: 'Inventory', icon: Boxes },
   { to: '/admin/reports', label: 'Reports', icon: BarChart3 },
   { to: '/admin/settings', label: 'Settings', icon: Settings },
