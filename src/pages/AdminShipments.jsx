@@ -212,6 +212,8 @@ function AdminShipments() {
             <thead>
               <tr className="text-left text-[#52647D] border-b border-gray-100">
                 <th className="px-6 py-4 font-medium">Order #</th>
+                <th className="px-6 py-4 font-medium">Customer</th>
+                <th className="px-6 py-4 font-medium">Seller</th>
                 <th className="px-6 py-4 font-medium">Items</th>
                 <th className="px-6 py-4 font-medium">Carrier</th>
                 <th className="px-6 py-4 font-medium">Tracking</th>
@@ -227,10 +229,12 @@ function AdminShipments() {
                 const isProcessing = processingId === s.id
                 const isOpen = expandedId === s.id
                 const items = s.sellerOrder?.items || []
+                const customer = s.sellerOrder?.order?.user
+                const seller = s.sellerOrder?.seller
                 return (
                   <Fragment key={s.id}>
                     <tr className="border-b border-gray-50">
-                      <td className="px-6 py-4 font-semibold text-[#101A30]">
+                      <td className="px-6 py-4 font-semibold text-[#101A30] whitespace-nowrap">
                         {s.sellerOrder?.order?.orderNumber ? (
                           <Link
                             to="/admin/orders"
@@ -241,6 +245,19 @@ function AdminShipments() {
                         ) : (
                           '-'
                         )}
+                      </td>
+                      <td className="px-6 py-4">
+                        {customer ? (
+                          <div>
+                            <p className="text-[#101A30]">{customer.name || '-'}</p>
+                            <p className="text-xs text-[#52647D]">{customer.email}</p>
+                          </div>
+                        ) : (
+                          <span className="text-[#52647D]">-</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-[#101A30]">
+                        {seller?.shopName || '-'}
                       </td>
                       <td className="px-6 py-4 text-[#101A30]">
                         {items.length === 0 ? (
@@ -314,7 +331,7 @@ function AdminShipments() {
                     </tr>
                     {isOpen && (
                       <tr className="border-b border-gray-50 bg-[#F8F8FC]">
-                        <td colSpan={8} className="px-6 py-4">
+                        <td colSpan={10} className="px-6 py-4">
                           {(s.events || []).length === 0 ? (
                             <p className="text-xs text-[#52647D]">No tracking events yet.</p>
                           ) : (

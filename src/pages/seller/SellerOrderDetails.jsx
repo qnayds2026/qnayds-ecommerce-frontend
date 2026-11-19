@@ -13,7 +13,8 @@
 import sellerService from '../../api/service/sellerService'
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Truck, Package, MapPin, Clock } from 'lucide-react'
+// NEW: CreditCard icon added
+import { ArrowLeft, Truck, Package, MapPin, Clock, CreditCard } from 'lucide-react'
 
 const STATUS_COLOR = {
   PENDING:    'bg-yellow-100 text-yellow-700',
@@ -47,6 +48,12 @@ const NEXT_STATUS = {
 
 function fmt(v) {
   return `₹${Number(v).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`
+}
+
+// NEW: payment status badge colors
+const PAYMENT_COLOR = {
+  PENDING:  'bg-yellow-100 text-yellow-700',
+  CAPTURED: 'bg-green-100  text-green-700',
 }
 
 function SellerOrderDetails() {
@@ -125,7 +132,11 @@ function SellerOrderDetails() {
 
   const nextStatuses = NEXT_STATUS[order.status] || []
   const canShip      = ['CONFIRMED', 'PROCESSING'].includes(order.status) && !order.shipment
-  const addr         = order.order?.deliveryAddress
+  // NEW: address fields come directly on the parent order
+  const parent       = order.order
+  const hasAddr      = Boolean(parent?.deliveryAddressLine1)
+  // NEW: payment of the parent order (undefined for old orders)
+  const payment      = parent?.payments?.[0]
 
   return (
     <div className="max-w-3xl space-y-5">
@@ -258,7 +269,7 @@ function SellerOrderDetails() {
           </div>
         </div>
 
-        {/* Right: address + status update + history */}
+        {/* Right: address + payment + status update + history */}
         <div className="space-y-5">
 
           {/* Delivery address */}
@@ -267,20 +278,46 @@ function SellerOrderDetails() {
               <MapPin size={16} className="text-[#2864F0]" />
               <h3 className="font-semibold text-[#101A30]">Delivery Address</h3>
             </div>
+            {/* NEW: reads the delivery* fields of the parent order */}
             <div className="px-5 py-4 text-sm space-y-0.5">
-              {addr ? (
+              {hasAddr ? (
                 <>
-                  <p className="font-semibold text-[#101A30]">{addr.name || order.order?.user?.name}</p>
-                  <p className="text-[#52647D]">{addr.line1}</p>
-                  {addr.line2 && <p className="text-[#52647D]">{addr.line2}</p>}
+                  <p className="font-semibold text-[#101A30]">{parent.deliveryName}</p>
+                  <p className="text-[#52647D]">{parent.deliveryAddressLine1}</p>
+                  {parent.deliveryAddressLine2 && <p className="text-[#52647D]">{parent.deliveryAddressLine2}</p>}
                   <p className="text-[#52647D]">
-                    {[addr.city, addr.state, addr.postalCode].filter(Boolean).join(', ')}
+                    {[parent.deliveryCity, parent.deliveryState, parent.deliveryPostalCode].filter(Boolean).join(', ')}
                   </p>
-                  {addr.country && <p className="text-[#52647D]">{addr.country}</p>}
-                  {addr.phone   && <p className="text-[#52647D]">{addr.phone}</p>}
+                  {parent.deliveryCountry && <p className="text-[#52647D]">{parent.deliveryCountry}</p>}
+                  {parent.deliveryPhone   && <p className="text-[#52647D]">{parent.deliveryPhone}</p>}
                 </>
               ) : (
                 <p className="text-[#52647D]">No address info available.</p>
+              )}
+            </div>
+          </div>
+
+          {/* NEW: Payment card (read-only, no COD collect for sellers) */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100">
+            <div className="flex items-center gap-2 px-5 py-4 border-b border-gray-100">
+              <CreditCard size={16} className="text-[#2864F0]" />
+              <h3 className="font-semibold text-[#101A30]">Payment</h3>
+            </div>
+            <div className="px-5 py-4 text-sm">
+              {payment ? (
+                <>
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="font-semibold text-[#101A30]">
+                      {payment.method === 'COD' ? 'Cash on Delivery' : payment.method === 'ONLINE' ? 'Online payment' : payment.method}
+                    </p>
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${PAYMENT_COLOR[payment.status]||'bg-gray-100 text-gray-600'}`}>
+                      {payment.status}
+                    </span>
+                  </div>
+                  <p className="text-xs text-[#52647D] mt-1">Order amount: {fmt(payment.amount)}</p>
+                </>
+              ) : (
+                <p className="text-[#52647D]">No payment info.</p>
               )}
             </div>
           </div>

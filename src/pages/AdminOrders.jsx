@@ -24,6 +24,12 @@ const badgeColors = {
   REFUNDED: 'bg-gray-100 text-gray-700 border-gray-200',
 }
 
+// Payment status badge colors
+const paymentBadgeColors = {
+  PENDING: 'bg-yellow-50 text-yellow-800 border-yellow-200',
+  CAPTURED: 'bg-green-50 text-green-700 border-green-200',
+}
+
 const PAGE_SIZE = 10
 
 function formatDate(value) {
@@ -54,6 +60,15 @@ function getSellerNames(order) {
   return [...new Set(names)].join(', ') || '-'
 }
 
+// Pending COD payment of an order (null if there is none)
+function getPendingCodPayment(order) {
+  return (
+    (order.payments || []).find(
+      (p) => p.method === 'COD' && p.status === 'PENDING'
+    ) || null
+  )
+}
+
 function AdminOrders() {
   const [activeTab, setActiveTab] = useState('')
   const [searchInput, setSearchInput] = useState('')
@@ -63,8 +78,13 @@ function AdminOrders() {
   const [pagination, setPagination] = useState({ page: 1, totalPages: 1, total: 0 })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [successMessage, setSuccessMessage] = useState('')
+  // Payment id that is currently being marked as collected
+  const [collectingId, setCollectingId] = useState('')
+  // Change this number to reload the list
+  const [reloadKey, setReloadKey] = useState(0)
 
-  // Load orders whenever status tab, search text or page changes
+  // Load orders whenever status tab, search text, page or reloadKey changes
   useEffect(() => {
     let cancelled = false
 
@@ -96,7 +116,7 @@ function AdminOrders() {
     return () => {
       cancelled = true
     }
-  }, [activeTab, search, page])
+  }, [activeTab, search, page, reloadKey])
 
   const handleTabChange = (value) => {
     setActiveTab(value)
@@ -113,6 +133,32 @@ function AdminOrders() {
     setSearchInput('')
     setSearch('')
     setPage(1)
+  }
+
+  // Mark a COD payment as collected (only for DELIVERED orders)
+  const handleCollectCash = async (order, payment) => {
+    const ok = window.confirm(
+      `Mark cash collected for order ${order.orderNumber} (${formatAmount(
+        payment.amount
+      )})?`
+    )
+    if (!ok) return
+
+    try {
+      setCollectingId(payment.id)
+      setError('')
+      setSuccessMessage('')
+
+      await apiRequest(`/payments/${payment.id}/cod/collect`, { method: 'POST' })
+
+      setSuccessMessage(`Cash collected for order ${order.orderNumber}.`)
+      // Reload the list to show the updated payment status
+      setReloadKey((k) => k + 1)
+    } catch (err) {
+      setError(err.message || 'Could not mark cash as collected')
+    } finally {
+      setCollectingId('')
+    }
   }
 
   return (
@@ -171,6 +217,12 @@ function AdminOrders() {
         </div>
       )}
 
+      {successMessage && (
+        <div className="mt-5 rounded-lg bg-green-50 border border-green-200 text-green-700 px-4 py-3 text-sm">
+          {successMessage}
+        </div>
+      )}
+
       <div className="mt-5 bg-white rounded-xl shadow-sm overflow-x-auto">
         {loading ? (
           <p className="p-6 text-[#52647D]">Loading orders...</p>
@@ -185,8 +237,10 @@ function AdminOrders() {
                 <th className="px-6 py-4 font-medium">Seller</th>
                 <th className="px-6 py-4 font-medium">Items</th>
                 <th className="px-6 py-4 font-medium">Amount</th>
+                <th className="px-6 py-4 font-medium">Payment</th>
                 <th className="px-6 py-4 font-medium">Status</th>
                 <th className="px-6 py-4 font-medium">Date</th>
+                <th className="px-6 py-4 font-medium">Action</th>
               </tr>
             </thead>
             <tbody>
@@ -195,6 +249,9 @@ function AdminOrders() {
                   (sum, item) => sum + (item.quantity || 0),
                   0
                 )
+                const payment = (order.payments || [])[0] || null
+                const pendingCod = getPendingCodPayment(order)
+                const canCollect = order.status === 'DELIVERED' && pendingCod
 
                 return (
                   <tr key={order.id} className="border-b border-gray-50 last:border-0">
@@ -211,6 +268,23 @@ function AdminOrders() {
                       {formatAmount(order.totalAmount)}
                     </td>
                     <td className="px-6 py-4">
+                      {payment ? (
+                        <div>
+                          <p className="text-[#101A30] font-medium">{payment.method}</p>
+                          <span
+                            className={`inline-block mt-1 px-2 py-0.5 rounded-full border text-xs font-semibold whitespace-nowrap ${
+                              paymentBadgeColors[payment.status] ||
+                              'bg-gray-100 text-gray-700 border-gray-200'
+                            }`}
+                          >
+                            {formatStatus(payment.status)}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-[#52647D]">-</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4">
                       <span
                         className={`inline-block px-3 py-1 rounded-full border text-xs font-semibold whitespace-nowrap ${
                           badgeColors[order.status] || ''
@@ -221,6 +295,21 @@ function AdminOrders() {
                     </td>
                     <td className="px-6 py-4 text-[#52647D]">
                       {formatDate(order.createdAt)}
+                    </td>
+                    <td className="px-6 py-4">
+                      {canCollect ? (
+                        <button
+                          onClick={() => handleCollectCash(order, pendingCod)}
+                          disabled={collectingId === pendingCod.id}
+                          className="px-3 py-2 rounded-lg text-xs font-medium bg-[#2864F0] text-white hover:bg-[#2878C8] transition whitespace-nowrap disabled:opacity-50"
+                        >
+                          {collectingId === pendingCod.id
+                            ? 'Saving...'
+                            : 'Mark cash collected'}
+                        </button>
+                      ) : (
+                        <span className="text-[#52647D]">-</span>
+                      )}
                     </td>
                   </tr>
                 )
