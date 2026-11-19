@@ -1,5 +1,4 @@
-
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { apiRequest } from '../services/api'
 
@@ -14,6 +13,102 @@ function Login() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+
+  const googleButtonRef = useRef(null)
+  const googleInitializedRef = useRef(false)
+  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID
+
+  useEffect(() => {
+    if (!googleClientId) {
+      setError(
+        'Google Login is not configured. Add VITE_GOOGLE_CLIENT_ID to the frontend .env file.'
+      )
+      return
+    }
+
+    const renderGoogleButton = () => {
+      if (
+        !window.google?.accounts?.id ||
+        !googleButtonRef.current ||
+        googleInitializedRef.current
+      ) return
+
+      window.google.accounts.id.initialize({
+        client_id: googleClientId,
+        callback: async (googleResponse) => {
+          if (!googleResponse?.credential) {
+            setError('Google sign-in did not return an ID token. Please try again.')
+            return
+          }
+
+          setError('')
+          setLoading(true)
+
+          try {
+            const response = await apiRequest('/auth/google', {
+              method: 'POST',
+              body: JSON.stringify({
+                idToken: googleResponse.credential,
+              }),
+            })
+
+            const { user, accessToken } = response
+
+            sessionStorage.setItem('accessToken', accessToken)
+            sessionStorage.setItem('user', JSON.stringify(user))
+
+            if (user.role === 'CUSTOMER') navigate('/customer')
+            else if (user.role === 'SELLER') navigate('/seller')
+            else if (user.role === 'ADMIN') navigate('/admin')
+            else setError('Invalid user role.')
+          } catch (err) {
+            setError(err.message || 'Google login failed. Please try again.')
+          } finally {
+            setLoading(false)
+          }
+        },
+      })
+
+      window.google.accounts.id.renderButton(
+        googleButtonRef.current,
+        {
+          type: 'standard',
+          theme: 'outline',
+          size: 'large',
+          text: 'continue_with',
+          shape: 'rectangular',
+          width: 336,
+        }
+      )
+
+      googleInitializedRef.current = true
+    }
+
+    const existingScript = document.querySelector(
+      'script[src="https://accounts.google.com/gsi/client"]'
+    )
+
+    if (window.google?.accounts?.id) {
+      renderGoogleButton()
+    } else if (existingScript) {
+      existingScript.addEventListener('load', renderGoogleButton)
+    } else {
+      const script = document.createElement('script')
+      script.src = 'https://accounts.google.com/gsi/client'
+      script.async = true
+      script.defer = true
+      script.onload = renderGoogleButton
+      script.onerror = () => {
+        setError('Unable to load Google Sign-In. Check your internet connection.')
+      }
+
+      document.head.appendChild(script)
+    }
+
+    return () => {
+      existingScript?.removeEventListener('load', renderGoogleButton)
+    }
+  }, [googleClientId, navigate])
 
   const handleChange = (e) => {
     setFormData({
@@ -76,7 +171,19 @@ function Login() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="mt-8 space-y-5">
+        <div className="mt-8 flex justify-center">
+          <div ref={googleButtonRef} />
+        </div>
+
+        <div className="flex items-center gap-3 mt-6">
+          <div className="h-px flex-1 bg-gray-200" />
+          <span className="text-xs text-gray-400">
+            OR CONTINUE WITH EMAIL
+          </span>
+          <div className="h-px flex-1 bg-gray-200" />
+        </div>
+
+        <form onSubmit={handleSubmit} className="mt-6 space-y-5">
 
           <div>
             <label className="block text-sm font-semibold text-[#101A30] mb-2">

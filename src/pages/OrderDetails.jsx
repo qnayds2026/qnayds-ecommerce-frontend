@@ -30,6 +30,19 @@ function formatStatus(status) {
   return (status || '').replaceAll('_', ' ')
 }
 
+// NEW: readable payment method name
+function formatPaymentMethod(method) {
+  if (method === 'COD') return 'Cash on Delivery'
+  if (method === 'ONLINE') return 'Online payment'
+  return method || '-'
+}
+
+// NEW: payment status badge colors
+const paymentBadgeColors = {
+  PENDING: 'bg-yellow-50 text-yellow-800 border-yellow-200',
+  CAPTURED: 'bg-green-50 text-green-700 border-green-200',
+}
+
 // Steps shown in the tracking timeline (same order as the backend flow)
 const TRACK_STEPS = [
   { key: 'PACKED', label: 'Packed', text: 'Seller has packed your item' },
@@ -213,6 +226,9 @@ function OrderDetails() {
     .map((so) => so.shipment)
     .filter(Boolean)
 
+  // NEW: payments of this order (empty for old orders)
+  const payments = order.payments || []
+
   return (
     <div className="max-w-5xl mx-auto px-4 md:px-6 py-8">
       <Link to="/orders" className="text-sm text-[#2864F0] font-medium">
@@ -268,22 +284,65 @@ function OrderDetails() {
           </div>
         </section>
 
-        {/* Delivery address */}
-        <section className="bg-white rounded-lg shadow-sm p-5 md:p-6 h-fit">
-          <h2 className="text-lg font-semibold text-[#101A30] mb-4">
-            Delivery Address
-          </h2>
-          <p className="font-medium text-[#101A30]">{order.deliveryName}</p>
-          <p className="text-sm text-[#52647D] mt-1">{order.deliveryPhone}</p>
-          <p className="text-sm text-[#52647D] mt-2">
-            {order.deliveryAddressLine1}
-            {order.deliveryAddressLine2 ? `, ${order.deliveryAddressLine2}` : ''}
-          </p>
-          <p className="text-sm text-[#52647D]">
-            {order.deliveryCity}, {order.deliveryState} - {order.deliveryPostalCode}
-          </p>
-          <p className="text-sm text-[#52647D]">{order.deliveryCountry}</p>
-        </section>
+        {/* Right column: delivery address + payment */}
+        <div className="space-y-5 h-fit">
+          {/* Delivery address */}
+          <section className="bg-white rounded-lg shadow-sm p-5 md:p-6">
+            <h2 className="text-lg font-semibold text-[#101A30] mb-4">
+              Delivery Address
+            </h2>
+            <p className="font-medium text-[#101A30]">{order.deliveryName}</p>
+            <p className="text-sm text-[#52647D] mt-1">{order.deliveryPhone}</p>
+            <p className="text-sm text-[#52647D] mt-2">
+              {order.deliveryAddressLine1}
+              {order.deliveryAddressLine2 ? `, ${order.deliveryAddressLine2}` : ''}
+            </p>
+            <p className="text-sm text-[#52647D]">
+              {order.deliveryCity}, {order.deliveryState} - {order.deliveryPostalCode}
+            </p>
+            <p className="text-sm text-[#52647D]">{order.deliveryCountry}</p>
+          </section>
+
+          {/* NEW: Payment card (hidden when the order has no payment) */}
+          {payments.length > 0 && (
+            <section className="bg-white rounded-lg shadow-sm p-5 md:p-6">
+              <h2 className="text-lg font-semibold text-[#101A30] mb-4">Payment</h2>
+
+              <div className="space-y-4">
+                {payments.map((p) => (
+                  <div key={p.id}>
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="font-medium text-[#101A30]">
+                        {formatPaymentMethod(p.method)}
+                      </p>
+                      <span
+                        className={`inline-block px-3 py-1 rounded-full border text-xs font-semibold whitespace-nowrap ${
+                          paymentBadgeColors[p.status] ||
+                          'bg-gray-100 text-gray-700 border-gray-200'
+                        }`}
+                      >
+                        {formatStatus(p.status)}
+                      </span>
+                    </div>
+                    <p className="text-sm text-[#52647D] mt-1">
+                      Amount: {formatPrice(p.amount)}
+                    </p>
+                    {p.method === 'COD' && p.status === 'PENDING' && (
+                      <p className="text-xs text-[#52647D] mt-2">
+                        Please pay in cash when your order is delivered.
+                      </p>
+                    )}
+                    {p.method === 'COD' && p.status === 'CAPTURED' && (
+                      <p className="text-xs text-green-700 mt-2">
+                        Cash received. Thank you!
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+        </div>
       </div>
 
       {/* Shipping */}

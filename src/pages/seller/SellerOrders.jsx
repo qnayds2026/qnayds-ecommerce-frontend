@@ -20,6 +20,12 @@ const STATUS_COLOR = {
   REFUNDED:        'bg-gray-100    text-gray-600',
 }
 
+// NEW: payment status badge colors
+const PAYMENT_COLOR = {
+  PENDING:  'bg-yellow-100 text-yellow-700',
+  CAPTURED: 'bg-green-100  text-green-700',
+}
+
 function fmt(amount) {
   return `₹${Number(amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`
 }
@@ -72,32 +78,50 @@ function SellerOrders() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-100 bg-gray-50">
-                  {['Order ID','Date','Items','Amount','Status','Action'].map((h, i) => (
-                    <th key={h} className={`px-5 py-3 text-xs font-semibold text-[#52647D] uppercase tracking-wide ${i===5?'text-right':'text-left'}`}>{h}</th>
+                  {/* NEW: Payment column added before Status */}
+                  {['Order ID','Date','Items','Amount','Payment','Status','Action'].map((h, i) => (
+                    <th key={h} className={`px-5 py-3 text-xs font-semibold text-[#52647D] uppercase tracking-wide ${i===6?'text-right':'text-left'}`}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
-                {orders.map(o => (
-                  <tr key={o.id} className="hover:bg-[#F0F0F8] transition-colors">
-                    <td className="px-5 py-3 font-mono text-xs text-[#101A30]">#{o.id.slice(-8).toUpperCase()}</td>
-                    <td className="px-5 py-3 text-xs text-[#52647D] whitespace-nowrap">
-                      {new Date(o.createdAt).toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' })}
-                    </td>
-                    <td className="px-5 py-3 text-[#52647D]">{o.items?.length ?? '—'}</td>
-                    <td className="px-5 py-3 font-semibold text-[#101A30]">{fmt(o.totalAmount)}</td>
-                    <td className="px-5 py-3">
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${STATUS_COLOR[o.status]||'bg-gray-100 text-gray-600'}`}>
-                        {o.status}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3 text-right">
-                      <Link to={`/seller/orders/${o.id}`} className="text-xs text-[#2864F0] font-semibold hover:underline">
-                        View →
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
+                {orders.map(o => {
+                  // NEW: payment of the parent order (undefined for old orders)
+                  const payment = o.order?.payments?.[0]
+                  return (
+                    <tr key={o.id} className="hover:bg-[#F0F0F8] transition-colors">
+                      <td className="px-5 py-3 font-mono text-xs text-[#101A30]">#{o.id.slice(-8).toUpperCase()}</td>
+                      <td className="px-5 py-3 text-xs text-[#52647D] whitespace-nowrap">
+                        {new Date(o.createdAt).toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' })}
+                      </td>
+                      <td className="px-5 py-3 text-[#52647D]">{o.items?.length ?? '—'}</td>
+                      <td className="px-5 py-3 font-semibold text-[#101A30]">{fmt(o.totalAmount)}</td>
+                      {/* NEW: Payment cell */}
+                      <td className="px-5 py-3">
+                        {payment ? (
+                          <div>
+                            <p className="text-xs font-medium text-[#101A30]">{payment.method}</p>
+                            <span className={`inline-block mt-1 px-2 py-0.5 rounded-full text-xs font-semibold ${PAYMENT_COLOR[payment.status]||'bg-gray-100 text-gray-600'}`}>
+                              {payment.status}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-[#52647D]">—</span>
+                        )}
+                      </td>
+                      <td className="px-5 py-3">
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${STATUS_COLOR[o.status]||'bg-gray-100 text-gray-600'}`}>
+                          {o.status}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3 text-right">
+                        <Link to={`/seller/orders/${o.id}`} className="text-xs text-[#2864F0] font-semibold hover:underline">
+                          View →
+                        </Link>
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>
