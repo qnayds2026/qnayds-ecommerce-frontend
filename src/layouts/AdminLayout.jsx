@@ -86,7 +86,7 @@ function AdminLayout() {
       >
         <div className="flex items-start justify-between">
           <Link to="/admin" className="px-6 py-5 text-2xl font-bold text-white">
-            QNAYDS
+            QCART
             <span className="block text-xs font-normal text-[#B8C4D9] mt-1">
               Admin Panel
             </span>

@@ -211,7 +211,7 @@ function Home() {
           <div className="px-6 md:px-12 py-12 md:py-16 flex flex-col md:flex-row items-center justify-between gap-10">
             <div className="max-w-xl">
               <span className="text-[#2864F0] font-semibold text-sm">
-                WELCOME TO QNAYDS
+                WELCOME TO QCART
               </span>
 
               <h1 className="text-4xl md:text-6xl font-bold text-[#101A30] mt-5 leading-tight">

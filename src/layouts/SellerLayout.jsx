@@ -32,7 +32,7 @@ function SidebarContent({ collapsed, mobile, displayName, user, onCollapse, onCl
       <div className="flex items-center justify-between px-4 py-5 border-b border-blue-700/40">
         {(!collapsed || mobile) && (
           <div>
-            <span className="text-white font-bold text-lg tracking-wide">QNAYDS</span>
+            <span className="text-white font-bold text-lg tracking-wide">QCART</span>
             <p className="text-blue-200 text-xs mt-0.5">Seller Centre</p>
           </div>
         )}
