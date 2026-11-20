@@ -400,6 +400,22 @@ function SellerAddProduct() {
       setImages(imgs => imgs.filter(i => i.id !== imgId))
     } catch (err) { alert(err.message) }
   }
+  /* make image main */
+const handleMakeMain = async (imgId) => {
+  try {
+    // selected image 0, baaki ellam +1
+    const reordered = [
+      images.find(i => i.id === imgId),
+      ...images.filter(i => i.id !== imgId),
+    ]
+    await Promise.all(
+      reordered.map((img, idx) =>
+        sellerService.updateImage(img.id, { sortOrder: idx })
+      )
+    )
+    setImages(reordered.map((img, idx) => ({ ...img, sortOrder: idx })))
+  } catch (err) { alert(err.message) }
+}
 
   if (fetchLoading) return (
     <div className="flex items-center justify-center min-h-[200px]">
@@ -420,6 +436,8 @@ function SellerAddProduct() {
           {isEdit ? 'Edit Product' : 'Add New Product'}
         </h2>
       </div>
+
+      
 
       {/* ── 1. PRODUCT DETAILS ── */}
       <form onSubmit={handleSaveProduct} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-4">
@@ -550,27 +568,34 @@ function SellerAddProduct() {
           </h3>
 
           {/* Image grid */}
-          {images.length > 0 && (
-            <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
-              {images.map((img, i) => (
-                <div key={img.id} className="relative group aspect-square rounded-xl overflow-hidden border border-gray-200 bg-gray-100">
-                  <img src={img.url} alt={img.altText || ''} className="w-full h-full object-cover" />
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                    <button type="button" onClick={() => handleDeleteImage(img.id)}
-                      className="bg-red-500 hover:bg-red-600 text-white p-1.5 rounded-full">
-                      <Trash2 size={13} />
-                    </button>
-                  </div>
-                  {i === 0 && (
-                    <span className="absolute top-1.5 left-1.5 bg-[#2864F0] text-white text-[9px] px-1.5 py-0.5 rounded font-semibold">
-                      Main
-                    </span>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
+{images.length > 0 && (
+  <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+    {images.map((img, i) => (
+      <div key={img.id} className="relative group aspect-square rounded-xl overflow-hidden border border-gray-200 bg-gray-100">
+        <img src={img.url} alt={img.altText || ''} className="w-full h-full object-cover" />
 
+        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+          {i !== 0 && (
+            <button type="button" onClick={() => handleMakeMain(img.id)}
+              className="bg-[#2864F0] hover:bg-[#2878C8] text-white text-[10px] px-2 py-1 rounded-full font-semibold">
+              Make Main
+            </button>
+          )}
+          <button type="button" onClick={() => handleDeleteImage(img.id)}
+            className="bg-red-500 hover:bg-red-600 text-white p-1.5 rounded-full">
+            <Trash2 size={13} />
+          </button>
+        </div>
+
+        {i === 0 && (
+          <span className="absolute top-1.5 left-1.5 bg-[#2864F0] text-white text-[9px] px-1.5 py-0.5 rounded font-semibold">
+            Main
+          </span>
+        )}
+      </div>
+    ))}
+  </div>
+)}
           {/* Add image form */}
           <form onSubmit={handleAddImage} className="space-y-3">
             {imgError && <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg p-2">{imgError}</p>}
