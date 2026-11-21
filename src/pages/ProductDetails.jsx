@@ -1,8 +1,10 @@
+
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useDispatch } from 'react-redux'
 import { apiRequest } from '../services/api'
 import { addToCart } from '../store/cartSlice'
+import { Share2 } from 'lucide-react'
 
 function ProductDetails() {
   const { id } = useParams()
@@ -37,12 +39,14 @@ function ProductDetails() {
         setLoading(false)
       }
     }
+
     loadProduct()
   }, [id])
 
   // Check whether this product is already in the wishlist
   useEffect(() => {
     if (!sessionStorage.getItem('accessToken')) return
+
     apiRequest('/wishlist')
       .then((res) => {
         const list = res?.data?.items || res?.data || []
@@ -51,6 +55,7 @@ function ProductDetails() {
               (w) => (w.productId || w.product?.id || w.id) === id
             )
           : false
+
         setWishlisted(found)
       })
       .catch(() => {})
@@ -69,6 +74,7 @@ function ProductDetails() {
   const stock = getStock(selectedVariant)
   const price = Number(selectedVariant?.price || 0)
   const comparePrice = Number(selectedVariant?.compareAtPrice || 0)
+
   const discount =
     comparePrice > price
       ? Math.round(((comparePrice - price) / comparePrice) * 100)
@@ -83,6 +89,7 @@ function ProductDetails() {
       navigate('/login')
       return true
     }
+
     return false
   }
 
@@ -90,12 +97,15 @@ function ProductDetails() {
   const handleAddToCart = async () => {
     if (requireLogin()) return false
     if (!selectedVariantId) return false
+
     try {
       setAdding(true)
       setMessage('')
+
       await dispatch(
         addToCart({ variantId: selectedVariantId, quantity: 1 })
       ).unwrap()
+
       setMessage('Added to cart')
       return true
     } catch (err) {
@@ -108,13 +118,16 @@ function ProductDetails() {
     }
   }
 
+  // Buy Now
   const handleBuyNow = async () => {
     const added = await handleAddToCart()
     if (added) navigate('/cart')
   }
 
+  // Wishlist
   const handleWishlist = async () => {
     if (requireLogin()) return
+
     try {
       if (wishlisted) {
         await apiRequest(`/wishlist/${id}`, { method: 'DELETE' })
@@ -125,6 +138,28 @@ function ProductDetails() {
       }
     } catch (err) {
       setMessage(err.message || 'Wishlist update failed')
+    }
+  }
+
+  // Share product
+  const handleShare = async () => {
+    const shareData = {
+      title: product?.name || product?.title || 'QCART Product',
+      text: `Check out ${product?.name || product?.title || 'this product'} on QCART!`,
+      url: window.location.href,
+    }
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData)
+      } else {
+        await navigator.clipboard.writeText(shareData.url)
+        setMessage('Product link copied successfully!')
+      }
+    } catch (err) {
+      if (err.name !== 'AbortError') {
+        setMessage('Unable to share product link.')
+      }
     }
   }
 
@@ -183,6 +218,7 @@ function ProductDetails() {
                 {product.brand}
               </p>
             )}
+
             <h1 className="text-2xl md:text-3xl font-bold text-[#101A30] mt-1">
               {product.name}
             </h1>
@@ -192,11 +228,13 @@ function ProductDetails() {
               <p className="text-3xl font-bold text-[#101A30]">
                 ₹{price.toLocaleString('en-IN')}
               </p>
+
               {discount > 0 && (
                 <>
                   <p className="text-lg text-[#52647D] line-through">
                     ₹{comparePrice.toLocaleString('en-IN')}
                   </p>
+
                   <p className="text-sm font-semibold text-green-600">
                     {discount}% off
                   </p>
@@ -210,10 +248,12 @@ function ProductDetails() {
                 <p className="text-sm font-semibold text-[#101A30] mb-2">
                   Select Variant
                 </p>
+
                 <div className="flex flex-wrap gap-3">
                   {variants.map((v) => {
                     const active = v.id === selectedVariantId
                     const vStock = getStock(v)
+
                     return (
                       <button
                         key={v.id}
@@ -231,6 +271,7 @@ function ProductDetails() {
                         <span className="block font-medium">
                           {v.name || v.sku}
                         </span>
+
                         <span className="block text-xs">
                           ₹{Number(v.price).toLocaleString('en-IN')}
                           {vStock === 0 ? ' · Out of stock' : ''}
@@ -260,7 +301,7 @@ function ProductDetails() {
             </p>
 
             {/* Actions */}
-            <div className="flex flex-wrap gap-3 mt-6">
+            <div className="flex flex-wrap items-center gap-3 mt-6">
               <button
                 onClick={handleAddToCart}
                 disabled={adding || stock === 0}
@@ -268,6 +309,7 @@ function ProductDetails() {
               >
                 {adding ? 'Adding...' : 'Add to Cart'}
               </button>
+
               <button
                 onClick={handleBuyNow}
                 disabled={adding || stock === 0}
@@ -275,14 +317,30 @@ function ProductDetails() {
               >
                 Buy Now
               </button>
+
+              {/* Wishlist Button */}
               <button
+                type="button"
                 onClick={handleWishlist}
                 className="w-12 h-12 rounded-lg border border-gray-300 flex items-center justify-center text-xl hover:border-[#2864F0]"
                 title={wishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
+                aria-label={wishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
               >
                 <span className={wishlisted ? 'text-red-500' : 'text-[#52647D]'}>
                   {wishlisted ? '♥' : '♡'}
                 </span>
+              </button>
+
+              {/* Share Button */}
+              <button
+                type="button"
+                onClick={handleShare}
+                className="flex flex-col items-center justify-center gap-1 min-w-[60px] text-[#52647D] hover:text-[#2864F0] transition"
+                title="Share product"
+                aria-label="Share product"
+              >
+                <Share2 size={23} strokeWidth={1.8} />
+                <span className="text-sm">Share</span>
               </button>
             </div>
 
@@ -295,6 +353,7 @@ function ProductDetails() {
               <h2 className="font-semibold text-[#101A30] mb-2">
                 Product Description
               </h2>
+
               <p className="text-sm text-[#52647D]">
                 {product.description || 'No description available.'}
               </p>

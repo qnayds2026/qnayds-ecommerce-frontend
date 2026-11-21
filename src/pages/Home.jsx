@@ -1,8 +1,10 @@
+
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useDispatch } from 'react-redux'
 import { apiRequest } from '../services/api'
 import { addToCart } from '../store/cartSlice'
+import { Share2 } from 'lucide-react'
 
 // Get the cheapest active variant
 function getStartingVariant(product) {
@@ -23,6 +25,7 @@ function getProductImage(product) {
 function formatPrice(price) {
   return Number(price).toLocaleString('en-IN')
 }
+
 // Emoji icons for known categories (matched by name)
 const categoryIcons = {
   fashion: '👗',
@@ -191,6 +194,33 @@ function Home() {
       )
     } finally {
       setProcessingId('')
+    }
+  }
+
+  // Share individual product
+  const handleShare = async (product) => {
+    const shareUrl = `${window.location.origin}/product/${product.id}`
+
+    const shareData = {
+      title: product.name || 'QCART Product',
+      text: `Check out ${product.name || 'this product'} on QCART!`,
+      url: shareUrl,
+    }
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData)
+      } else if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(shareUrl)
+        setActionMessage('Product link copied successfully!')
+        setActionError('')
+      } else {
+        setActionError('Sharing is not supported in this browser.')
+      }
+    } catch (err) {
+      if (err.name !== 'AbortError') {
+        setActionError('Unable to share product link.')
+      }
     }
   }
 
@@ -404,6 +434,7 @@ function Home() {
                         </span>
                       )}
 
+                      {/* Wishlist Button */}
                       <button
                         type="button"
                         onClick={() => handleWishlist(product)}
@@ -414,6 +445,17 @@ function Home() {
                         }`}
                       >
                         {isWishlisted ? '♥' : '♡'}
+                      </button>
+
+                      {/* Share Button */}
+                      <button
+                        type="button"
+                        onClick={() => handleShare(product)}
+                        aria-label={`Share ${product.name}`}
+                        title="Share product"
+                        className="absolute top-14 right-3 w-9 h-9 rounded-full bg-white shadow flex items-center justify-center text-[#52647D] hover:text-[#2864F0] transition"
+                      >
+                        <Share2 size={18} />
                       </button>
                     </div>
 
