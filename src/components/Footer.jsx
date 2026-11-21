@@ -8,7 +8,7 @@ function Footer() {
 
         <div>
           <h2 className="text-2xl font-bold text-[#2878C8]">
-            Qnayds
+            Qcart
           </h2>
           <p className="text-[#B8C4D9] mt-3">
             Your trusted online shopping destination.
@@ -39,7 +39,7 @@ function Footer() {
       </div>
 
       <div className="border-t border-[#2878C8]/40 text-center py-5 text-[#B8C4D9]">
-        © {new Date().getFullYear()} Qnayds. All rights reserved.
+        © {new Date().getFullYear()} Qcart. All rights reserved.
       </div>
     </footer>
   )

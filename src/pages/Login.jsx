@@ -154,7 +154,7 @@ function Login() {
       <div className="w-full max-w-md bg-white rounded-2xl shadow-lg p-8">
 
         <Link to="/" className="block text-center text-3xl font-bold text-[#2864F0]">
-          QNAYDS
+          QCART
         </Link>
 
         <h1 className="text-2xl font-bold text-[#101A30] text-center mt-8">

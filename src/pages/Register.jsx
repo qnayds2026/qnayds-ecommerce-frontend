@@ -160,7 +160,7 @@ function Register() {
       <div className="w-full max-w-md bg-white rounded-2xl shadow-lg p-8">
 
         <Link to="/" className="block text-center text-3xl font-bold text-[#2864F0]">
-          QNAYDS
+          QCART
         </Link>
 
         <h1 className="text-2xl font-bold text-[#101A30] text-center mt-8">
@@ -168,7 +168,7 @@ function Register() {
         </h1>
 
         <p className="text-sm text-[#52647D] text-center mt-2">
-          Join QNAYDS and start shopping
+          Join QCART and start shopping
         </p>
 
         {error && (

@@ -107,7 +107,7 @@ function Navbar() {
               to="/"
               className="text-2xl font-bold text-[#2864F0] shrink-0"
             >
-              QNAYDS
+              QCART
             </Link>
 
             {/* Search */}

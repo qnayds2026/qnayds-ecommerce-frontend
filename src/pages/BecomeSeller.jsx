@@ -100,7 +100,7 @@ function BecomeSeller() {
       <div className="max-w-xl mx-auto bg-white rounded-2xl shadow-sm p-6 md:p-8">
         <h1 className="text-2xl font-bold text-[#101A30]">Become a Seller</h1>
         <p className="text-sm text-[#52647D] mt-1">
-          Start selling your products on Qnayds.
+          Start selling your products on Qcart.
         </p>
 
         {loading ? (
