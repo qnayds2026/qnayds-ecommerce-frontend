@@ -13,6 +13,7 @@ function ProductDetails() {
 
   const [product, setProduct] = useState(null)
   const [selectedVariantId, setSelectedVariantId] = useState(null)
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
@@ -25,13 +26,17 @@ function ProductDetails() {
       try {
         setLoading(true)
         setError('')
+
         const res = await apiRequest(`/products/${id}`)
         const data = res?.data
+
         setProduct(data)
+        setSelectedImageIndex(0)
 
         // Select the first active variant by default
         const firstActive =
           data?.variants?.find((v) => v.isActive) || data?.variants?.[0]
+
         setSelectedVariantId(firstActive?.id || null)
       } catch (err) {
         setError(err.message || 'Unable to load product')
@@ -50,6 +55,7 @@ function ProductDetails() {
     apiRequest('/wishlist')
       .then((res) => {
         const list = res?.data?.items || res?.data || []
+
         const found = Array.isArray(list)
           ? list.some(
               (w) => (w.productId || w.product?.id || w.id) === id
@@ -80,9 +86,16 @@ function ProductDetails() {
       ? Math.round(((comparePrice - price) / comparePrice) * 100)
       : 0
 
-  const firstImage = product?.images?.[0]
-  const imageUrl =
-    typeof firstImage === 'string' ? firstImage : firstImage?.url || ''
+  // Get all product images
+  const images = (product?.images || [])
+    .map((image) => {
+      if (typeof image === 'string') return image
+      return image?.url || image?.imageUrl || ''
+    })
+    .filter(Boolean)
+
+  // Currently selected main image
+  const imageUrl = images[selectedImageIndex] || images[0] || ''
 
   const requireLogin = () => {
     if (!sessionStorage.getItem('accessToken')) {
@@ -93,7 +106,7 @@ function ProductDetails() {
     return false
   }
 
-  // Returns true when the item was added successfully
+  // Add to Cart
   const handleAddToCart = async () => {
     if (requireLogin()) return false
     if (!selectedVariantId) return false
@@ -110,7 +123,9 @@ function ProductDetails() {
       return true
     } catch (err) {
       setMessage(
-        typeof err === 'string' ? err : err?.message || 'Could not add to cart'
+        typeof err === 'string'
+          ? err
+          : err?.message || 'Could not add to cart'
       )
       return false
     } finally {
@@ -191,27 +206,60 @@ function ProductDetails() {
 
         {/* Breadcrumb */}
         <p className="text-sm text-[#52647D] mb-4">
-          <Link to="/" className="hover:text-[#2864F0]">Home</Link>
+          <Link to="/" className="hover:text-[#2864F0]">
+            Home
+          </Link>
           <span className="mx-2">/</span>
           <span className="text-[#101A30]">{product.name}</span>
         </p>
 
         <div className="bg-white rounded-2xl p-6 md:p-8 grid grid-cols-1 md:grid-cols-2 gap-8">
 
-          {/* Image */}
-          <div className="bg-[#F0F0F8] rounded-xl aspect-square flex items-center justify-center overflow-hidden">
-            {imageUrl ? (
-              <img
-                src={imageUrl}
-                alt={product.name}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <span className="text-8xl">📦</span>
+          {/* Product Image Gallery */}
+          <div className="min-w-0">
+
+            {/* Main Image */}
+            <div className="bg-[#F0F0F8] rounded-xl aspect-square flex items-center justify-center overflow-hidden">
+              {imageUrl ? (
+                <img
+                  src={imageUrl}
+                  alt={product.name}
+                  className="w-full h-full object-contain"
+                />
+              ) : (
+                <span className="text-8xl">📦</span>
+              )}
+            </div>
+
+            {/* Image Thumbnails */}
+            {images.length > 1 && (
+              <div className="grid grid-cols-4 sm:grid-cols-5 gap-3 mt-4">
+                {images.map((image, index) => (
+                  <button
+                    key={`${image}-${index}`}
+                    type="button"
+                    onClick={() => setSelectedImageIndex(index)}
+                    className={`aspect-square rounded-lg overflow-hidden border-2 bg-white transition ${
+                      selectedImageIndex === index
+                        ? 'border-[#2864F0]'
+                        : 'border-gray-200 hover:border-[#2864F0]'
+                    }`}
+                    aria-label={`View product image ${index + 1}`}
+                    aria-pressed={selectedImageIndex === index}
+                  >
+                    <img
+                      src={image}
+                      alt={`${product.name} - Image ${index + 1}`}
+                      className="w-full h-full object-contain"
+                    />
+                  </button>
+                ))}
+              </div>
             )}
+
           </div>
 
-          {/* Info */}
+          {/* Product Information */}
           <div>
             {product.brand && (
               <p className="text-sm font-semibold text-[#2864F0] uppercase">
