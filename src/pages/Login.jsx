@@ -57,7 +57,7 @@ function Login() {
             sessionStorage.setItem('accessToken', accessToken)
             sessionStorage.setItem('user', JSON.stringify(user))
 
-            if (user.role === 'CUSTOMER') navigate('/customer')
+            if (user.role === 'CUSTOMER') navigate('/')
             else if (user.role === 'SELLER') navigate('/seller')
             else if (user.role === 'ADMIN') navigate('/admin')
             else setError('Invalid user role.')
@@ -134,7 +134,7 @@ function Login() {
       sessionStorage.setItem('user', JSON.stringify(user))
 
       if (user.role === 'CUSTOMER') {
-        navigate('/customer')
+        navigate('/')
       } else if (user.role === 'SELLER') {
         navigate('/seller')
       } else if (user.role === 'ADMIN') {
