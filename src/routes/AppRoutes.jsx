@@ -24,6 +24,7 @@ import OrderDetails    from '../pages/OrderDetails'
 import CustomerProfile from '../pages/CustomerProfile'
 import BecomeSeller    from '../pages/BecomeSeller'
 import NotificationsPage from '../pages/NotificationsPage'
+import MyReviews       from '../pages/MyReviews'
 
 // Admin pages
 import AdminDashboard  from '../pages/AdminDashboard'
@@ -72,6 +73,7 @@ function AppRoutes() {
             <Route path="/customer"        element={<CustomerProfile />} />
             <Route path="/notifications" element={<NotificationsPage />} />
             <Route path="/become-seller" element={<BecomeSeller />} />
+            <Route path="/reviews"       element={<MyReviews />} />
             
           </Route>
         </Route>

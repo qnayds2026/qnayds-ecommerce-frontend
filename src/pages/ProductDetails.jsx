@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useDispatch } from 'react-redux'
 import { apiRequest } from '../services/api'
 import { addToCart } from '../store/cartSlice'
+import ReviewSection from '../components/ReviewSection'
 
 function ProductDetails() {
   const { id } = useParams()
@@ -301,6 +302,12 @@ function ProductDetails() {
             </div>
           </div>
         </div>
+
+        {/* Reviews */}
+        <div className="bg-white rounded-2xl p-6 md:p-8 mt-6">
+          <ReviewSection productId={id} />
+        </div>
+
       </div>
     </div>
   )
