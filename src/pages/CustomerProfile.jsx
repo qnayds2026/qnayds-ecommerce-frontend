@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Package, MapPin, LogOut } from 'lucide-react'
+import { Package, MapPin, Star, LogOut } from 'lucide-react'
 import { apiRequest } from '../services/api'
 
 function CustomerProfile() {
@@ -96,6 +96,10 @@ function CustomerProfile() {
             <Link to="/orders" className={sideLinkClass}>
               <Package size={20} strokeWidth={1.5} />
               MY ORDERS
+            </Link>
+            <Link to="/reviews" className={sideLinkClass}>
+              <Star size={20} strokeWidth={1.5} />
+              MY REVIEWS
             </Link>
             <Link to="/addresses" className={sideLinkClass}>
               <MapPin size={20} strokeWidth={1.5} />
